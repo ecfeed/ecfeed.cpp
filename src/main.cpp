@@ -151,59 +151,6 @@ std::string serialize(const std::pair<std::string, std::any>&v){
 }
 
 
-// class Serializer
-// {
-//   std::unordered_map<std::type_index, std::function<std::string(const std::any&)>> _serializers;
-
-// public:
-//   Serializer(){
-//     _serializers[std::type_index(typeid(unsigned))] = [](const std::any& v){
-//       return std::to_string(std::any_cast<unsigned>(v));
-//     };
-//     _serializers[std::type_index(typeid(int))] = [](const std::any& v){
-//       return std::to_string(std::any_cast<int>(v));
-//     };
-//     _serializers[std::type_index(typeid(bool))] = [](const std::any& v){
-//       return std::any_cast<bool>(v) ? "true" : "false";    
-//     };
-//     _serializers[std::type_index(typeid(std::string))] = [](const std::any& v){
-//       return std::any_cast<std::string>(v);    
-//     };
-//     _serializers[std::type_index(typeid(DataSource))] = [](const std::any& v){
-//       return data_source_url_param(std::any_cast<DataSource>(v));    
-//     };
-//     _serializers[std::type_index(typeid(TemplateType))] = [](const std::any& v){
-//       return template_type_url_param(std::any_cast<TemplateType>(v));    
-//     };
-//     _serializers[std::type_index(typeid(std::list<std::any>))] = [this](const std::any& v){
-//       std::string result = "[";
-//       for(auto& e : std::any_cast<std::list<std::any>>(v)){
-//         result += serialize(e);
-//       }
-//       return result + "]";
-//     };
-//     _serializers[std::type_index(typeid(std::map<std::string, std::any>))] = [this](const std::any& v){
-//       std::string result = "{";
-//       for(auto& e : std::any_cast<std::map<std::string, std::any>>(v)){
-//         std::cout << "Serializing " << e.first << std::endl;
-//         result += e.first + ":" + serialize(e.second);
-//       }
-//       return result + "}";
-//     };
-//   }
-
-//   std::string serialize(const std::any& v){
-//     if(auto serializer = _serializers.find(v.type()); serializer != _serializers.end()){
-//       return serializer->second(v);
-//     }
-//     else{
-//       std::cerr << "Cannot serialize option. Serializer for given type not registered.\n";
-//       return "";
-//     }
-//   };
-
-// };
-
 }//namespace options
 
 class TestProvider{
@@ -230,12 +177,12 @@ class TestProvider{
       _keystore_path(keystore_path),
 
       _temp_dir(std::filesystem::temp_directory_path()),
-      _pkey_path(_temp_dir / std::tmpnam(nullptr)),
-      _cert_path(_temp_dir / std::tmpnam(nullptr)),
-      _ca_path(_temp_dir / std::tmpnam(nullptr))
-      // _pkey_path(temp_dir / _random_filename()),
-      // _cert_path(temp_dir / _random_filename()),
-      // _ca_path(temp_dir / _random_filename())
+      // _pkey_path(_temp_dir / std::tmpnam(nullptr)),
+      // _cert_path(_temp_dir / std::tmpnam(nullptr)),
+      // _ca_path(_temp_dir / std::tmpnam(nullptr))
+      _pkey_path(_temp_dir / _random_filename()),
+      _cert_path(_temp_dir / _random_filename()),
+      _ca_path(_temp_dir / _random_filename())
     {
       OpenSSL_add_all_algorithms();
       ERR_load_CRYPTO_strings();
