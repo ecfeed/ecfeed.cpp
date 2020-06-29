@@ -6,6 +6,7 @@
 #include<vector>
 #include<list>
 #include<map>
+#include<set>
 #include<unordered_map>
 #include<any>
 #include<openssl/pem.h>
@@ -68,7 +69,7 @@ static std::string data_source_url_param(const DataSource& s)
     case DataSource::STATIC_DATA: 
       return "static";
     case DataSource::NWISE: 
-      return "genNwise";
+      return "genNWise";
     case DataSource::CARTESIAN: 
       return "genCartesian";
     case DataSource::RANDOM: 
@@ -77,44 +78,33 @@ static std::string data_source_url_param(const DataSource& s)
   return "UNKNOWN";
 }
 
-
-  // template<typename T>
-  // class BlockingQueue
-  // {
-  // public:
-  //   T getNext();
-  //   bool hasNext();
-  // };
-
 namespace options{
 
 std::string serialize(const std::any&);
 std::string serialize(const std::pair<std::string, std::any>&v);
+static std::unordered_map<std::type_index, std::function<std::string(const std::any&)>> _serializers;
 
-static std::unordered_map<std::type_index, std::function<std::string(const std::any&)>> 
-initSerializers()
+void init_serializers()
 {
-  std::unordered_map<std::type_index, std::function<std::string(const std::any&)>> result;
-
-    result[std::type_index(typeid(unsigned))] = [](const std::any& v){
+    _serializers[std::type_index(typeid(unsigned))] = [](const std::any& v){
       return "'" + std::to_string(std::any_cast<unsigned>(v)) + "'";
     };
-    result[std::type_index(typeid(int))] = [](const std::any& v){
+    _serializers[std::type_index(typeid(int))] = [](const std::any& v){
       return "'" + std::to_string(std::any_cast<int>(v)) + "'";
     };
-    result[std::type_index(typeid(bool))] = [](const std::any& v){
+    _serializers[std::type_index(typeid(bool))] = [](const std::any& v){
       return std::string("'") + (std::any_cast<bool>(v) ? "true" : "false") + "'";    
     };
-    result[std::type_index(typeid(std::string))] = [](const std::any& v){
+    _serializers[std::type_index(typeid(std::string))] = [](const std::any& v){
       return "'" + std::any_cast<std::string>(v) + "'";    
     };
-    result[std::type_index(typeid(DataSource))] = [](const std::any& v){
+    _serializers[std::type_index(typeid(DataSource))] = [](const std::any& v){
       return "'" + data_source_url_param(std::any_cast<DataSource>(v)) + "'";    
     };
-    result[std::type_index(typeid(TemplateType))] = [](const std::any& v){
+    _serializers[std::type_index(typeid(TemplateType))] = [](const std::any& v){
       return "'" + template_type_url_param(std::any_cast<TemplateType>(v)) + "'";    
     };
-    result[std::type_index(typeid(std::list<std::any>))] = [](const std::any& v){
+    _serializers[std::type_index(typeid(std::list<std::any>))] = [](const std::any& v){
       std::string result = "[";
       for(auto& e : std::any_cast<std::list<std::any>>(v)){
         result += serialize(e);
@@ -122,7 +112,7 @@ initSerializers()
       result.erase(result.find_last_of(","));
       return result + "]";
     };
-    result[std::type_index(typeid(std::map<std::string, std::any>))] = [](const std::any& v){
+    _serializers[std::type_index(typeid(std::map<std::string, std::any>))] = [](const std::any& v){
       std::string result = "{";
       for(auto& e : std::any_cast<std::map<std::string, std::any>>(v)){
         result += "'" + e.first + "':" + serialize(e.second) + ",";
@@ -130,11 +120,7 @@ initSerializers()
       result.erase(result.find_last_of(","));
       return result + "}";
     };
-
-    return result;
 }
-
-static std::unordered_map<std::type_index, std::function<std::string(const std::any&)>> _serializers = initSerializers();
 
 std::string serialize(const std::any& v){
   if(auto serializer = _serializers.find(v.type()); serializer != _serializers.end()){
@@ -149,12 +135,10 @@ std::string serialize(const std::any& v){
 std::string serialize(const std::pair<std::string, std::any>&v){
   return "'" + v.first + "':" + serialize(v.second);
 }
-
-
 }//namespace options
 
+
 class TestProvider{
-  std::string _model;
   const std::string _genserver;
   const std::string _keystore_path;
   const std::string _keystore_password;
@@ -168,11 +152,13 @@ class TestProvider{
 
 
   public:
+    std::string model;
+
     TestProvider(const std::string& model,
                  const std::filesystem::path& keystore_path,
                  const std::string& genserver = "gen.ecfeed.com",
                  const std::string& keystore_password = "changeit") : 
-      _model(model), _genserver(genserver), 
+      model(model), _genserver(genserver), 
       _keystore_password(keystore_password),
       _keystore_path(keystore_path),
 
@@ -180,9 +166,9 @@ class TestProvider{
       // _pkey_path(_temp_dir / std::tmpnam(nullptr)),
       // _cert_path(_temp_dir / std::tmpnam(nullptr)),
       // _ca_path(_temp_dir / std::tmpnam(nullptr))
-      _pkey_path(_temp_dir / _random_filename()),
-      _cert_path(_temp_dir / _random_filename()),
-      _ca_path(_temp_dir / _random_filename())
+      _pkey_path(_temp_dir / _randomFilename()),
+      _cert_path(_temp_dir / _randomFilename()),
+      _ca_path(_temp_dir   / _randomFilename())
     {
       OpenSSL_add_all_algorithms();
       ERR_load_CRYPTO_strings();
@@ -195,7 +181,8 @@ class TestProvider{
       _curl_handle = curl_easy_init();
 
       _dumpKeystore();
-      // _initCurl();
+      
+       options::init_serializers();
       
     }
 
@@ -204,6 +191,8 @@ class TestProvider{
       std::filesystem::remove(_pkey_path);
       std::filesystem::remove(_cert_path);
       std::filesystem::remove(_ca_path);
+
+      curl_easy_cleanup(_curl_handle);
     }
 
     std::vector<std::string> getArgumentNames(const std::string& method, 
@@ -221,55 +210,79 @@ class TestProvider{
     void exportNwise(const std::string& method, 
                      const unsigned n = 2, 
                      const unsigned coverage = 100,
-                     std::map<std::string, std::any> opt = {})
+                     std::set<std::string> constraints = {},
+                     std::map<std::string, std::set<std::string>> choices = {})
     {
       std::map<std::string, std::any> gen_properties;
       gen_properties["n"] = n;
       gen_properties["coverage"] = coverage;
+      if(constraints.size() > 0) gen_properties["constraints"] = constraints;
+      if(choices.size() > 0)     gen_properties["choices"] = choices;
 
+      std::map<std::string, std::any> opt = {};
       opt["dataSource"] = DataSource::NWISE;
       opt["properties"] = gen_properties;
 
-      std::string serialized;
-      for(const std::pair<std::string, std::any>& option : opt)
-      {
-        serialized += options::serialize(option);
-      }
-
       _export(method, opt);
+    }
+
+    void exportPairwise(const std::string& method, 
+                        const unsigned coverage = 100,
+                        std::set<std::string> constraints = {},
+                        std::map<std::string, std::set<std::string>> choices = {})
+    {
+      exportNwise(method, 2, coverage, constraints, choices);
     }
 
     void exportRandom(const std::string& method, 
                       const unsigned length = 1, 
                       const bool duplicates = false,
                       const bool adaptive = true,
-                      std::map<std::string, std::any> opt = {})
+                      std::set<std::string> constraints = {},
+                      std::map<std::string, std::set<std::string>> choices = {})
     {
       std::map<std::string, std::any> gen_properties;
       gen_properties["length"] = length;
       gen_properties["duplicates"] = duplicates;
       gen_properties["adaptive"] = adaptive;
+      if(constraints.size() > 0) gen_properties["constraints"] = constraints;
+      if(choices.size() > 0)     gen_properties["choices"] = choices;
 
+      std::map<std::string, std::any> opt = {};
       opt["dataSource"] = DataSource::RANDOM;
       opt["properties"] = gen_properties;
-
-      std::string serialized;
-      for(const std::pair<std::string, std::any>& option : opt)
-      {
-        serialized += options::serialize(option);
-      }
 
       _export(method, opt);
     }
 
-    // BlockingQueue<std::string> export_(const std::string& method, 
-    //                                    const std::map<std::string, std::string> options);
-    // BlockingQueue<std::vector<std::any>> generate(const std::string& method, 
-    //                                               const std::map<std::string, std::string> options);
+    void exportCartesian(const std::string& method,
+                         std::set<std::string> constraints = {},
+                         std::map<std::string, std::set<std::string>> choices = {})
+    {
+      std::map<std::string, std::any> gen_properties;
+      if(constraints.size() > 0) gen_properties["constraints"] = constraints;
+      if(choices.size() > 0)     gen_properties["choices"] = choices;
+
+      std::map<std::string, std::any> opt = {};
+      opt["dataSource"] = DataSource::CARTESIAN;
+      opt["properties"] = gen_properties;
+
+      _export(method, opt);
+    }
+
+    void exportStatic(const std::string& method, 
+                      std::set<std::string> test_suites = {})
+    {
+      std::map<std::string, std::any> opt = {};
+      opt["dataSource"] = DataSource::STATIC_DATA;
+
+      _export(method, opt);
+    }
 
 private:
-  void _export(const std::string& method, std::map<std::string, std::any>& options)
-  {
+  void _performRequest(const std::string& url){
+    std::cout << url << std::endl << std::endl;
+
     char error_buf[128];
     curl_easy_setopt(_curl_handle, CURLOPT_SSLCERT, _cert_path.string().c_str());
     curl_easy_setopt(_curl_handle, CURLOPT_SSLCERTTYPE, "pem");
@@ -278,20 +291,20 @@ private:
     curl_easy_setopt(_curl_handle, CURLOPT_BUFFERSIZE, 8);
 
     curl_easy_setopt(_curl_handle, CURLOPT_ERRORBUFFER, error_buf);
-   
-    auto url = _buildExportUrl(method, options);
-
-    std::cout << url << std::endl << std::endl;
 
     curl_easy_setopt(_curl_handle, CURLOPT_URL, url.c_str());
-
     auto success = curl_easy_perform(_curl_handle);
 
     if(success != 0){
         std::cout << error_buf << std::endl;
     }
     
-    curl_easy_cleanup(_curl_handle);
+  }
+
+  void _export(const std::string& method, std::map<std::string, std::any>& options)
+  {   
+    auto url = _buildExportUrl(method, options);
+    _performRequest(url);
   }
 
   void _dumpKeystore()
@@ -368,6 +381,7 @@ private:
 
   std::string _randomFilename()
   { 
+
     std::string result = "tmp";
     for(unsigned i = 0; i < 10; ++i)
     {
@@ -399,7 +413,7 @@ private:
     url += "&request={\"method\":\"" + method + "\"";
     if(opt.count("model") == 0)
     {
-      url += ",\"model\":\"" + _model + "\"";
+      url += ",\"model\":\"" + model + "\"";
     }
     else
     {
@@ -472,7 +486,9 @@ int main(int argc, char** argv){
 
     
   tp.exportRandom("TestClass.method", 5, true, false);
-  // tp.exportNwise("TestClass.method");
+  tp.exportNwise("TestClass.method", 3);
+  tp.exportPairwise("TestClass.method", 50);
+  tp.exportCartesian("TestClass.method");
 
 
 
