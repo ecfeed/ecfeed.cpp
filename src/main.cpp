@@ -604,13 +604,13 @@ private:
         std::shared_ptr<TestQueue<std::vector<std::any>>> result(new TestQueue<std::vector<std::any>>());
         std::shared_ptr<MethodInfo> method_info(new MethodInfo);
         std::shared_ptr<bool> method_info_ready(new bool(false));
-        std::cout << "Method info size: " << method_info->arg_types.size() << std::endl;
+ //       std::cout << "Method info size: " << method_info->arg_types.size() << std::endl;
 
         std::function<size_t(void *data, size_t size, size_t nmemb)> data_cb = [this, result, method_info, method_info_ready](void *data, size_t size, size_t nmemb) -> size_t{
             if(nmemb > 0)
             {
                 std::string test((char*) data, (char*) data + nmemb - 1); //last byte seem to be a new line character
-                std::cout << "Received line: " << test << std::endl;
+      //          std::cout << "Received line: " << test << std::endl;
 
                 auto [name, value] = _parseTestLine(test);
                 if(name == "info" && *method_info_ready == false){
@@ -629,7 +629,7 @@ private:
                     result->insert(_parseTestCase(value, method_info));
                 }
 
-                result->insert(std::vector<std::any>({5, 1}));
+                //result->insert(std::vector<std::any>({5, 1}));
                 // std::vector<std::any> test((char*) data, (char*) data + nmemb - 1); //last byte seem to be a new line character
                 // result->insert(test);
             }
@@ -802,8 +802,8 @@ private:
         auto begin = line.find_first_of("(");
         auto end = line.find_last_of(")");
         auto args = line.substr(begin + 1, end - begin - 1);
-        std::cout << "Parsing: " << args << std::endl;
-        std::cout << "Method info size: " << method_info->arg_types.size() << std::endl;
+//        std::cout << "Parsing: " << args << std::endl;
+//        std::cout << "Method info size: " << method_info->arg_types.size() << std::endl;
         std::stringstream ss(args);
         std::string token;
         while(std::getline(ss, token, ',')){
@@ -819,7 +819,7 @@ private:
     }
 
     std::vector<std::any> _parseTestCase(picojson::value test, std::shared_ptr<MethodInfo> method_info){
-        std::cout << "Parsing test case: " << test.to_str() << std::endl;
+ //       std::cout << "Parsing test case: " << test.to_str() << std::endl;
         std::vector<std::any> result;
         if(test.is<picojson::array>())
         {
@@ -828,7 +828,7 @@ private:
             for(auto element : test_array){
 //                auto test_element = element.get<picojson::object>();
                 std::string parameter = element.get<picojson::object>()["value"].to_str();
-                std::cout << "element: " << parameter << std::endl;
+ //               std::cout << "element: " << parameter << std::endl;
 
                 try{
                     result.push_back(_castTestParameter(parameter, method_info->arg_types[arg_index]));
@@ -966,24 +966,30 @@ int main(int argc, char** argv){
     std::set<std::string> test_suites = {"suite1"};    // Missing std::string options.
     std::map<std::string, std::set<std::string>> choices = {{"arg1", {"choice1", "choice2"}}, {"arg2", {"choice1"}}};   // Missing std::string options.
     
-    // std::map<std::string, std::any> options = {{"template", template_type}, {"coverage", coverage}, {"n", n}, {"constraints", constraints}, {"choices", choices}};
+    // std::map<std::string, std::any> optionsNWise = {{"template", template_type}, {"coverage", coverage}, {"n", n}, {"constraints", constraints}, {"choices", choices}};
     // for(auto test : *tp.exportNwise("QuickStart.test", template_type, n, coverage, constraints, choices)) { std::cout << test << std::endl; }
-    // for(auto test : *tp.exportNwise("QuickStart.test", options)) { std::cout << test << std::endl; }
+    // for(auto test : *tp.exportNwise("QuickStart.test", optionsNWise)) { std::cout << test << std::endl; }
     
-    // std::map<std::string, std::any> options = {{"template", template_type}, {"coverage", coverage}, {"constraints", constraints}, {"choices", choices}};
-    // for(auto test : *tp.exportPairwise("QuickStart.test", options)) { std::cout << test << std::endl; }
+    // std::map<std::string, std::any> optionsPairwise = {{"template", template_type}, {"coverage", coverage}, {"constraints", constraints}, {"choices", choices}};
+    // for(auto test : *tp.exportPairwise("QuickStart.test", optionsPairwise)) { std::cout << test << std::endl; }
 
-    // std::map<std::string, std::any> options = {{"template", template_type}, {"length", length}, {"duplicates", duplicates}, {"adaptive", adaptive}, {"constraints", constraints}, {"choices", choices}};
-    // for(auto test : *tp.exportRandom("QuickStart.test", options)) { std::cout << test << std::endl; }
+    // std::map<std::string, std::any> optionsRandom = {{"template", template_type}, {"length", length}, {"duplicates", duplicates}, {"adaptive", adaptive}, {"constraints", constraints}, {"choices", choices}};
+    // for(auto test : *tp.exportRandom("QuickStart.test", optionsRandom)) { std::cout << test << std::endl; }
     
-    // std::map<std::string, std::any> options = {{"template", template_type}, {"constraints", constraints}, {"choices", choices}};
-    // for(auto test : *tp.exportCartesian("QuickStart.test", options)) { std::cout << test << std::endl; }
+    // std::map<std::string, std::any> optionsCartesian = {{"template", template_type}, {"constraints", constraints}, {"choices", choices}};
+    // for(auto test : *tp.exportCartesian("QuickStart.test", optionsCartesian)) { std::cout << test << std::endl; }
     
-    for(auto test : *tp.exportStatic("QuickStart.test", test_suites)) { std::cout << test << std::endl; }   // Shouldn't it be like everything else, i.e 'options'?
+    // for(auto test : *tp.exportStatic("QuickStart.test", test_suites)) { std::cout << test << std::endl; }   // Shouldn't it be like everything else, i.e 'options'?
     // We can use test suites with constraints/choices.
 
 
-
+    std::map<std::string, std::any> optionsNWise = {{"coverage", coverage}, {"n", n}, {"constraints", constraints}, {"choices", choices}};
+    for(auto test : *tp.generateNwise("QuickStart.test", optionsNWise)) { 
+        for(auto element : test){
+            std::cout << element.type() << ":" << std::any_cast<int>(element) << ", ";
+        }
+        std::cout << std::endl;
+     }
 
 
 
