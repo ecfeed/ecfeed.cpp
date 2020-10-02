@@ -70,6 +70,7 @@ enum class DataSource
     CARTESIAN = 3,
     RANDOM = 4,
 };
+
 static std::string data_source_url_param(const DataSource& s)
 {
     switch(s){
@@ -91,7 +92,7 @@ std::string serialize(const std::any&);
 std::string serialize(const std::pair<std::string, std::any>&v);
 static std::unordered_map<std::type_index, std::function<std::string(const std::any&)>> _serializers;
 
-template<typename T>
+template<typename T> 
 std::function<std::string(const std::any&)> single_value_serializer = [](const std::any& v){
     return "'" + std::to_string(std::any_cast<T>(v)) + "'";
 };
@@ -367,7 +368,7 @@ public:
         exportRandom(method, {{"template", TemplateType::RAW},
                               {"length", 0},
                               {"adaptive", false},
-                              {"dupicates", true}});
+                              {"duplicates", true}});
 
         return std::vector<std::string>();
     }
@@ -721,9 +722,11 @@ private:
 
     std::string _buildExportUrl(const std::string& method, std::map<std::string, std::any>& options)
     {
-        if(options.count("template") > 0 && std::any_cast<TemplateType>(options["template"]) == TemplateType::RAW)
+        if(options.count("template") > 0 && std::any_cast<TemplateType>(options["template"]) == TemplateType::RAW) {
             options.erase("template");
-        return _buildRequestUrl(method, "requestData", options);
+            return _buildRequestUrl(method, "requestData", options);
+        }
+        
         return _buildRequestUrl(method, "requestExport", options);
     }
 
@@ -869,7 +872,7 @@ private:
         else if(type == "short"){
             return std::any(static_cast<short>(std::stoi(value)));
         }
-        else if(type == "inr"){
+        else if(type == "int"){
             return std::any(std::stoi(value));
         }
         else if(type == "long"){
@@ -932,99 +935,57 @@ public:
         return _export(method, opt);
     }
 
-    //     std::shared_ptr<TestQueue<std::string>> exportPairwise(const std::string& method,
-    //                                                            TemplateType templ = TemplateType::CSV,
-    //                                                            const unsigned coverage = 100,
-    //                                                            std::set<std::string> constraints = {},
-    //                                                            std::map<std::string, std::set<std::string>> choices = {})
-    //     {
-    //       std::lock_guard<std::mutex> lock(_mutex);
-
-    //       return exportNwise(method, templ, 2, coverage, constraints, choices);
-    //     }
-
-    //     std::shared_ptr<TestQueue<std::string>> exportRandom(const std::string& method,
-    //                                                          TemplateType templ = TemplateType::CSV,
-    //                                                          const unsigned length = 1,
-    //                                                          const bool duplicates = false,
-    //                                                          const bool adaptive = true,
-    //                                                          std::set<std::string> constraints = {},
-    //                                                          std::map<std::string, std::set<std::string>> choices = {})
-    //     {
-    //       std::lock_guard<std::mutex> lock(_mutex);
-
-    //       std::map<std::string, std::any> gen_properties;
-    //       gen_properties["length"] = length;
-    //       gen_properties["duplicates"] = duplicates;
-    //       gen_properties["adaptive"] = adaptive;
-    //       if(constraints.size() > 0) gen_properties["constraints"] = constraints;
-    //       if(choices.size() > 0)     gen_properties["choices"] = choices;
-
-    //       std::map<std::string, std::any> opt = {};
-    //       opt["template"] = templ;
-    //       opt["dataSource"] = DataSource::RANDOM;
-    //       opt["properties"] = gen_properties;
-
-    //       return _export(method, opt);
-    //     }
-
-    // std::shared_ptr<TestQueue<std::string>> exportCartesian(const std::string& method,
-    //                                                         TemplateType templ = TemplateType::CSV,
-    //                                                         std::set<std::string> constraints = {},
-    //                                                         std::map<std::string, std::set<std::string>> choices = {})
-    // {
-    //   std::lock_guard<std::mutex> lock(_mutex);
-
-    //   std::map<std::string, std::any> gen_properties;
-    //   if(constraints.size() > 0) gen_properties["constraints"] = constraints;
-    //   if(choices.size() > 0)     gen_properties["choices"] = choices;
-
-    //   std::map<std::string, std::any> opt = {};
-    //   opt["template"] = templ;
-    //   opt["dataSource"] = DataSource::CARTESIAN;
-    //   opt["properties"] = gen_properties;
-
-
-    //   return _export(method, opt);
-    // }
-
-
 };
 
 
 }//namespace ecfeed
 
 int main(int argc, char** argv){
+// auto q_0 = tp.exportNwise("QuickStart.test"); // Ambigous.
 
+    ecfeed::TestProvider tp(
+        "ZCPH-DFYI-R7R7-R6MM-89L8", 
+        "/home/krzysztof/Desktop/git/ecfeed.java/com.ecfeed.runner/src/test/resources/security.p12", 
+        "develop-gen.ecfeed.com"
+    );
 
+    for(auto test : *tp.exportNwise("QuickStart.test", ecfeed::TemplateType::CSV)) { std::cout << test << std::endl; }
+    for(auto test : *tp.exportNwise("QuickStart.test", ecfeed::TemplateType::XML)) { std::cout << test << std::endl; }
+    for(auto test : *tp.exportNwise("QuickStart.test", ecfeed::TemplateType::JSON)) { std::cout << test << std::endl; }
+    for(auto test : *tp.exportNwise("QuickStart.test", ecfeed::TemplateType::Gherkin)) { std::cout << test << std::endl; }
+    for(auto test : *tp.exportNwise("QuickStart.test", ecfeed::TemplateType::RAW)) { std::cout << test << std::endl; }
 
-    ecfeed::TestProvider tp("2037-6847-2110-8251-1296", "/home/patryk/ecfeed/security.p12");
-
+    // auto q_0 = tp.generateNwise("QuickStart.test", ecfeed::TemplateType::JSON);
+    // for(auto test : *q_0){
+        // for(auto element : test){
+            //          std::cout << std::any_cast<int>(element) << std::endl;
+        // }
+    // }
 
     // std::cout << "random:\n";
     // tp.exportRandom("TestClass.method", 5, true, false);
-    std::cout << "3-wise:\n";
-    std::map<std::string, std::set<std::string>> choices = {{"arg1", {"choice1", "choice2"}},
-                                                            {"arg2", {"choice1"}}};
+    // std::cout << "3-wise:\n";
+    // std::map<std::string, std::set<std::string>> choices = {{"arg1", {"choice1", "choice2"}},
+    //                                                         {"arg2", {"choice1"}}};
     //  auto q_1 = tp.exportNwise("TestClass.method",
     //                              {{"template", ecfeed::TemplateType::RAW},
     //                              {"n", 1},
     //                              {"constraints", std::set<std::string>{"constraint"}},
     //                              {"choices", choices}});
-    auto q_0 = tp.generateNwise("TestClass.method",
-    {{"n", 1},
-     {"constraints", std::set<std::string>{"constraint"}},
-     {"choices", choices}});
+    // auto q_0 = tp.generateNwise("QuickStart.test");
+    // {{"n", 1},
+    //  {"constraints", std::set<std::string>{"constraint"}},
+    //  {"choices", choices}});
 
 
     //  auto q_1 = tp.exportNwise("TestClass.method",
     //                              ecfeed::TemplateType::JSON,
     //                              3, 100, {"constraint"});
-    for(auto test : *q_0){
-        for(auto element : test){
-            //          std::cout << std::any_cast<int>(element) << std::endl;
-        }
-    }
+    // for(auto test : *q_0){
+    //     for(auto element : test){
+    //         //          std::cout << std::any_cast<int>(element) << std::endl;
+    //     }
+    // }
     // std::cout << "pairwise:\n";
     // tp.exportPairwise("TestClass.method", 50);
     //  std::cout << "cartesian:\n";

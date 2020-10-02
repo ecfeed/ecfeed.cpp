@@ -2,4 +2,5 @@
 build/*
 .vscode/*
 ecfeed.creator.user
+ecfeed
 
