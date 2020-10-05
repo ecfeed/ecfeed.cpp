@@ -1,0 +1,14 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/krzysztof/Desktop/git/ecfeed.cpp/src/test.cpp
+gtest/gtest.h
+/home/krzysztof/Desktop/git/ecfeed.cpp/src/gtest/gtest.h
+iostream
+-
+

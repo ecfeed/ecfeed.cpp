@@ -940,31 +940,31 @@ public:
 
 }//namespace ecfeed
 
-int main(int argc, char** argv){
+// int main(int argc, char** argv){
 // g++-8 -pthread -std=c++17 -o ecfeed src/main.cpp -lcurl -lcrypto -lstdc++fs && ./ecfeed
 // auto q_0 = tp.exportNwise("QuickStart.test"); // Ambiguous.
 
-    ecfeed::TestProvider tp(
-        "ZCPH-DFYI-R7R7-R6MM-89L8", 
-        "/home/krzysztof/Desktop/git/ecfeed.java/com.ecfeed.runner/src/test/resources/security.p12", 
-        "develop-gen.ecfeed.com"
-    );
+    // ecfeed::TestProvider tp(
+    //     "ZCPH-DFYI-R7R7-R6MM-89L8", 
+    //     "/home/krzysztof/Desktop/git/ecfeed.java/com.ecfeed.runner/src/test/resources/security.p12", 
+    //     "develop-gen.ecfeed.com"
+    // );
 
-    // for(auto test : *tp.exportNwise("QuickStart.test", ecfeed::TemplateType::CSV)) { std::cout << test << std::endl; }
+    // for(std::string test : *tp.exportNwise("QuickStart.test", ecfeed::TemplateType::CSV)) { std::cout << test << std::endl; }
     // for(auto test : *tp.exportNwise("QuickStart.test", ecfeed::TemplateType::XML)) { std::cout << test << std::endl; }
     // for(auto test : *tp.exportNwise("QuickStart.test", ecfeed::TemplateType::JSON)) { std::cout << test << std::endl; }
     // for(auto test : *tp.exportNwise("QuickStart.test", ecfeed::TemplateType::Gherkin)) { std::cout << test << std::endl; }
     // for(auto test : *tp.exportNwise("QuickStart.test", ecfeed::TemplateType::RAW)) { std::cout << test << std::endl; }
 
-    int n = 2;
-    int coverage = 100;
-    int length = 50;    // The generation should be stopped before reaching the limit.
-    bool duplicates = true;
-    bool adaptive = true;
-    ecfeed::TemplateType template_type = ecfeed::TemplateType::CSV;
-    std::set<std::string> constraints = {"constraint1"};    // Missing std::string options.
-    std::set<std::string> test_suites = {"suite1"};    // Missing std::string options.
-    std::map<std::string, std::set<std::string>> choices = {{"arg1", {"choice1", "choice2"}}, {"arg2", {"choice1"}}};   // Missing std::string options.
+    // int n = 2;
+    // int coverage = 100;
+    // int length = 50;    // The generation should be stopped before reaching the limit.
+    // bool duplicates = true;
+    // bool adaptive = true;
+    // ecfeed::TemplateType template_type = ecfeed::TemplateType::CSV;
+    // std::set<std::string> constraints = {"constraint1"};    // Missing std::string options.
+    // std::set<std::string> test_suites = {"suite1"};    // Missing std::string options.
+    // std::map<std::string, std::set<std::string>> choices = {{"arg1", {"choice1", "choice2"}}, {"arg2", {"choice1"}}};   // Missing std::string options.
     
     // std::map<std::string, std::any> optionsNWise = {{"template", template_type}, {"coverage", coverage}, {"n", n}, {"constraints", constraints}, {"choices", choices}};
     // for(auto test : *tp.exportNwise("QuickStart.test", template_type, n, coverage, constraints, choices)) { std::cout << test << std::endl; }
@@ -983,71 +983,13 @@ int main(int argc, char** argv){
     // We can use test suites with constraints/choices.
 
 
-    std::map<std::string, std::any> optionsNWise = {{"coverage", coverage}, {"n", n}, {"constraints", constraints}, {"choices", choices}};
-    for(auto test : *tp.generateNwise("QuickStart.test", optionsNWise)) { 
-        for(auto element : test){
-            std::cout << element.type() << ":" << std::any_cast<int>(element) << ", ";
-        }
-        std::cout << std::endl;
-     }
-
-
-
-
-
-
-
-
-    // auto q_0 = tp.generateNwise("QuickStart.test", ecfeed::TemplateType::JSON);
-    // for(auto test : *q_0){
-        // for(auto element : test){
-            //          std::cout << std::any_cast<int>(element) << std::endl;
-        // }
-    // }
-
-    // std::cout << "random:\n";
-    // tp.exportRandom("TestClass.method", 5, true, false);
-    // std::cout << "3-wise:\n";
-    // std::map<std::string, std::set<std::string>> choices = {{"arg1", {"choice1", "choice2"}},
-    //                                                         {"arg2", {"choice1"}}};
-    //  auto q_1 = tp.exportNwise("TestClass.method",
-    //                              {{"template", ecfeed::TemplateType::RAW},
-    //                              {"n", 1},
-    //                              {"constraints", std::set<std::string>{"constraint"}},
-    //                              {"choices", choices}});
-    // auto q_0 = tp.generateNwise("QuickStart.test");
-    // {{"n", 1},
-    //  {"constraints", std::set<std::string>{"constraint"}},
-    //  {"choices", choices}});
-
-
-    //  auto q_1 = tp.exportNwise("TestClass.method",
-    //                              ecfeed::TemplateType::JSON,
-    //                              3, 100, {"constraint"});
-    // for(auto test : *q_0){
+    // std::map<std::string, std::any> optionsNWise = {{"coverage", coverage}, {"n", n}, {"constraints", constraints}, {"choices", choices}};
+    // for(auto test : *tp.generateNwise("QuickStart.test", optionsNWise)) { 
     //     for(auto element : test){
-    //         //          std::cout << std::any_cast<int>(element) << std::endl;
+    //        std::cout << element.type() << ":" << std::any_cast<int>(element) << ", ";
     //     }
-    // }
-    // std::cout << "pairwise:\n";
-    // tp.exportPairwise("TestClass.method", 50);
-    //  std::cout << "cartesian:\n";
-    //  queue = tp.exportCartesian("TestClass.method1");
-
-    //  std::cout << "tp ready\n";
-
-    //  for(auto element : *q_1){
-    //    std::cout << element << std::endl;
+    //     std::cout << std::endl;
     //  }
-    // tp.exportCartesian("TestClass.method", ecfeed::TemplateType::RAW);
-    // tp.getArgumentNames("TestClass.method");
 
-    // result_queue<std::string> q;
-    // while(q.has_next())
-    // {
-    //   std::cout << q.next() << std::endl;
-    // }
-
-
-    return 0;
-}
+    // return 0;0
+// }
