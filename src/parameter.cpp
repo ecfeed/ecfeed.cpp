@@ -14,7 +14,7 @@ class TestArguments {
 public:
     void add(std::string name, std::string type, std::string value) {
         core.insert({ name, std::make_tuple(index++, type, value) });
-        std::cout << std::get<0>(core[name]) << " , " << std::get<1>(core[name]) << " , " << std::get<2>(core[name]) << std::endl;
+        std::cout << "name:" << name << " , index:" << std::get<0>(core[name]) << " , type:" << std::get<1>(core[name]) << " , value:" << std::get<2>(core[name]) << std::endl;
     }
 
     template<typename T>
@@ -70,27 +70,27 @@ private:
 
 };
 
-int main(int argc, char** argv){
-    TestArguments testArguments;
+// int main(int argc, char** argv){
+//     TestArguments testArguments;
 
-    testArguments.add("uno", "long", "1");
-    testArguments.add("dos", "int", "2");
-    testArguments.add("tres", "double", "3");
-    testArguments.add("cuatro", "int", "4");
-    testArguments.add("cinco", "boolean", "true");
-    testArguments.add("seis", "String", "data");
-    auto e1 = testArguments.get<long>("uno");
-    std::cout << typeid(e1).name() << " : " << e1 << std::endl;
-    auto e2 = testArguments.get<int>(1);
-    std::cout << typeid(e2).name() << " : " << e2 << std::endl;
-    auto e3 = testArguments.getDouble("tres");
-    std::cout << typeid(e3).name() << " : " << e3 << std::endl;
-    auto e4 = testArguments.getInt("cuatro");
-    std::cout << typeid(e4).name() << " : " << e4 << std::endl;
-    auto e5 = testArguments.getBool("cinco");
-    std::cout << typeid(e5).name() << " : " << e5 << std::endl;
-    auto e6 = testArguments.getString("seis");
-    std::cout << typeid(e6).name() << " : " << e6 << std::endl;
+//     testArguments.add("uno", "long", "1");
+//     testArguments.add("dos", "int", "2");
+//     testArguments.add("tres", "double", "3");
+//     testArguments.add("cuatro", "int", "4");
+//     testArguments.add("cinco", "boolean", "true");
+//     testArguments.add("seis", "String", "data");
+//     auto e1 = testArguments.get<long>("uno");
+//     std::cout << typeid(e1).name() << " : " << e1 << std::endl;
+//     auto e2 = testArguments.get<int>(1);
+//     std::cout << typeid(e2).name() << " : " << e2 << std::endl;
+//     auto e3 = testArguments.getDouble("tres");
+//     std::cout << typeid(e3).name() << " : " << e3 << std::endl;
+//     auto e4 = testArguments.getInt("cuatro");
+//     std::cout << typeid(e4).name() << " : " << e4 << std::endl;
+//     auto e5 = testArguments.getBool("cinco");
+//     std::cout << typeid(e5).name() << " : " << e5 << std::endl;
+//     auto e6 = testArguments.getString("seis");
+//     std::cout << typeid(e6).name() << " : " << e6 << std::endl;
 
-    return 0;
-}
+//     return 0;
+// }

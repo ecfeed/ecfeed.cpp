@@ -26,6 +26,7 @@
 #include<any>
 #include<future>
 #include<tuple>
+#include "parameter.cpp"
 
 struct memory {
     char *response;
@@ -412,7 +413,7 @@ public:
         return _export(method, opt);
     }
 
-    std::shared_ptr<TestQueue<std::vector<std::any>>> generateNwise(const std::string& method,
+    std::shared_ptr<TestQueue<TestArguments>> generateNwise(const std::string& method,
                                                                     std::map<std::string, std::any> options = {})
     {
         std::map<std::string, std::any> gen_properties;
@@ -596,11 +597,11 @@ private:
         return result;
     }
 
-    std::shared_ptr<TestQueue<std::vector<std::any>>> _generate(const std::string& method, std::map<std::string, std::any>& options){
+    std::shared_ptr<TestQueue<TestArguments>> _generate(const std::string& method, std::map<std::string, std::any>& options){
         auto url = _buildGenerateUrl(method, options);
 
         std::vector<std::string> types;
-        std::shared_ptr<TestQueue<std::vector<std::any>>> result(new TestQueue<std::vector<std::any>>());
+        std::shared_ptr<TestQueue<TestArguments>> result(new TestQueue<TestArguments>());
         std::shared_ptr<MethodInfo> method_info(new MethodInfo);
         std::shared_ptr<bool> method_info_ready(new bool(false));
  //       std::cout << "Method info size: " << method_info->arg_types.size() << std::endl;
@@ -817,32 +818,37 @@ private:
         return true;
     }
 
-    std::vector<std::any> _parseTestCase(picojson::value test, std::shared_ptr<MethodInfo> method_info){
- //       std::cout << "Parsing test case: " << test.to_str() << std::endl;
-        std::vector<std::any> result;
+    TestArguments _parseTestCase(picojson::value test, std::shared_ptr<MethodInfo> method_info){
+        TestArguments result;
+
         if(test.is<picojson::array>())
         {
             auto test_array = test.get<picojson::array>();
             unsigned arg_index = 0;
-            for(auto element : test_array){
-//                auto test_element = element.get<picojson::object>();
-                std::string parameter = element.get<picojson::object>()["value"].to_str();
- //               std::cout << "element: " << parameter << std::endl;
+            for(auto element : test_array)
+            {
+                std::string value = element.get<picojson::object>()["value"].to_str();
+                std::string name = element.get<picojson::object>()["name"].to_str();
 
-                try{
-                    result.push_back(_castTestParameter(parameter, method_info->arg_types[arg_index]));
-                }
-                catch(const std::exception& e){
+                try 
+                {
+                    result.add(method_info->arg_names[arg_index] + ":" + name, method_info->arg_types[arg_index], value);
+                } 
+                catch(const std::exception& e) 
+                {
                     std::cerr << "Exception caught: " << e.what() << ". Too many parameters in the test: " << test << std::endl;
                 }
+
                 arg_index++;
             }
         }
 
-//        if (! test.is<picojson::array>()) {
-//            std::cerr << "Error: test case should be a JSON array" << std::endl;
-//            return std::vector<std::any>();
-//        }
+       if (! test.is<picojson::array>()) 
+       {
+           std::cerr << "Error: test case should be a JSON array" << std::endl;
+           return result;
+       }
+
 //        const picojson::value::object& obj = test.get<picojson::array>();
 //        if(obj.size() > 0)
 //        {
@@ -854,40 +860,40 @@ private:
         return result;
     }
 
-    std::any _castTestParameter(std::string value, std::string type){
-        if(type == "String"){
-            return std::any(value);
-        }
-        else if(value.length() == 0){
-            std::cerr << "Parameter value cannot be empty string for types other than String\n";
-            return std::any();
-        }
-        else if(type == "char"){
-            return std::any(value.at(0));
-        }
-        else if(type == "byte"){
-            return std::any(static_cast<char>(std::stoi(value)));
-        }
-        else if(type == "short"){
-            return std::any(static_cast<short>(std::stoi(value)));
-        }
-        else if(type == "int"){
-            return std::any(std::stoi(value));
-        }
-        else if(type == "long"){
-            return std::any(std::stoll(value));
-        }
-        else if(type == "float"){
-            return std::any(std::stof(value));
-        }
-        else if(type == "double"){
-            return std::any(std::stold(value));
-        }
-        else {
-            std::cerr << "Unknown parameter type: " << type << ". Converting the parameter to String\n";
-            return std::any(value);
-        }
-    }
+    // std::any _castTestParameter(std::string value, std::string type){
+    //     if(type == "String"){
+    //         return std::any(value);
+    //     }
+    //     else if(value.length() == 0){
+    //         std::cerr << "Parameter value cannot be empty string for types other than String\n";
+    //         return std::any();
+    //     }
+    //     else if(type == "char"){
+    //         return std::any(value.at(0));
+    //     }
+    //     else if(type == "byte"){
+    //         return std::any(static_cast<char>(std::stoi(value)));
+    //     }
+    //     else if(type == "short"){
+    //         return std::any(static_cast<short>(std::stoi(value)));
+    //     }
+    //     else if(type == "int"){
+    //         return std::any(std::stoi(value));
+    //     }
+    //     else if(type == "long"){
+    //         return std::any(std::stoll(value));
+    //     }
+    //     else if(type == "float"){
+    //         return std::any(std::stof(value));
+    //     }
+    //     else if(type == "double"){
+    //         return std::any(std::stold(value));
+    //     }
+    //     else {
+    //         std::cerr << "Unknown parameter type: " << type << ". Converting the parameter to String\n";
+    //         return std::any(value);
+    //     }
+    // }
 
     std::tuple<std::string, picojson::value> _parseTestLine(std::string line){
         picojson::value v;
@@ -939,15 +945,15 @@ public:
 
 }//namespace ecfeed
 
-// int main(int argc, char** argv){
+int main(int argc, char** argv){
 // g++-8 -pthread -std=c++17 -o ecfeed src/main.cpp -lcurl -lcrypto -lstdc++fs && ./ecfeed
 // auto q_0 = tp.exportNwise("QuickStart.test"); // Ambiguous.
 
-    // ecfeed::TestProvider tp(
-    //     "ZCPH-DFYI-R7R7-R6MM-89L8", 
-    //     "/home/krzysztof/Desktop/git/ecfeed.java/com.ecfeed.runner/src/test/resources/security.p12", 
-    //     "develop-gen.ecfeed.com"
-    // );
+    ecfeed::TestProvider tp(
+        "ZCPH-DFYI-R7R7-R6MM-89L8", 
+        "/home/krzysztof/Desktop/git/ecfeed.java/com.ecfeed.runner/src/test/resources/security.p12", 
+        "develop-gen.ecfeed.com"
+    );
 
     // for(std::string test : *tp.exportNwise("QuickStart.test", ecfeed::TemplateType::CSV)) { std::cout << test << std::endl; }
     // for(auto test : *tp.exportNwise("QuickStart.test", ecfeed::TemplateType::XML)) { std::cout << test << std::endl; }
@@ -955,15 +961,15 @@ public:
     // for(auto test : *tp.exportNwise("QuickStart.test", ecfeed::TemplateType::Gherkin)) { std::cout << test << std::endl; }
     // for(auto test : *tp.exportNwise("QuickStart.test", ecfeed::TemplateType::RAW)) { std::cout << test << std::endl; }
 
-    // int n = 2;
-    // int coverage = 100;
-    // int length = 50;    // The generation should be stopped before reaching the limit.
-    // bool duplicates = true;
-    // bool adaptive = true;
-    // ecfeed::TemplateType template_type = ecfeed::TemplateType::CSV;
-    // std::set<std::string> constraints = {"constraint1"};    // Missing std::string options.
-    // std::set<std::string> test_suites = {"suite1"};    // Missing std::string options.
-    // std::map<std::string, std::set<std::string>> choices = {{"arg1", {"choice1", "choice2"}}, {"arg2", {"choice1"}}};   // Missing std::string options.
+    int n = 2;
+    int coverage = 100;
+    int length = 50;    // The generation should be stopped before reaching the limit.
+    bool duplicates = true;
+    bool adaptive = true;
+    ecfeed::TemplateType template_type = ecfeed::TemplateType::CSV;
+    std::set<std::string> constraints = {"constraint1"};    // Missing std::string options.
+    std::set<std::string> test_suites = {"suite1"};    // Missing std::string options.
+    std::map<std::string, std::set<std::string>> choices = {{"arg1", {"choice1", "choice2"}}, {"arg2", {"choice1"}}};   // Missing std::string options.
     
     // std::map<std::string, std::any> optionsNWise = {{"template", template_type}, {"coverage", coverage}, {"n", n}, {"constraints", constraints}, {"choices", choices}};
     // for(auto test : *tp.exportNwise("QuickStart.test", template_type, n, coverage, constraints, choices)) { std::cout << test << std::endl; }
@@ -982,13 +988,11 @@ public:
     // We can use test suites with constraints/choices.
 
 
-    // std::map<std::string, std::any> optionsNWise = {{"coverage", coverage}, {"n", n}, {"constraints", constraints}, {"choices", choices}};
-    // for(auto test : *tp.generateNwise("QuickStart.test", optionsNWise)) { 
-    //     for(auto element : test){
-    //        std::cout << element.type() << ":" << std::any_cast<int>(element) << ", ";
-    //     }
-    //     std::cout << std::endl;
-    //  }
+    std::map<std::string, std::any> optionsNWise = {{"coverage", coverage}, {"n", n}, {"constraints", constraints}, {"choices", choices}};
+    for(auto test : *tp.generateNwise("QuickStart.test", optionsNWise)) { 
+      
+        std::cout << std::endl;
+     }
 
-    // return 0;0
-// }
+    return 0;
+}
