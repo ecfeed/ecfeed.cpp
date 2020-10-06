@@ -88,7 +88,7 @@ private:
         _data.erase(_data.begin());
     }
 
-    void insert(int element){
+    void insert(T element){
         std::lock_guard<std::mutex> lock(_mutex);
         _data.push_back(element);
         _cv.notify_one();
