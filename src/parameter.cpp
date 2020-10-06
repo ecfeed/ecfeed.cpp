@@ -5,7 +5,6 @@
 #include <tuple>
 #include <stdexcept>
 #include <string>
-#include <cctype>
 
 class TestArguments {
     std::map<std::string, std::tuple<int, std::string, std::string>> core;
@@ -14,7 +13,7 @@ class TestArguments {
 public:
     void add(std::string name, std::string type, std::string value) {
         core.insert({ name, std::make_tuple(index++, type, value) });
-        std::cout << "name:" << name << " , index:" << std::get<0>(core[name]) << " , type:" << std::get<1>(core[name]) << " , value:" << std::get<2>(core[name]) << std::endl;
+        // std::cout << "name:" << name << ", index:" << std::get<0>(core[name]) << ", type:" << std::get<1>(core[name]) << ", value:" << std::get<2>(core[name]) << std::endl;
     }
 
     template<typename T>
@@ -69,6 +68,12 @@ private:
     }
 
 };
+
+std::ostream& operator<<(std::ostream& os, const TestArguments& testArguments)
+{
+    os << "test";
+    return os;
+}
 
 // int main(int argc, char** argv){
 //     TestArguments testArguments;

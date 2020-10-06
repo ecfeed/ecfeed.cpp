@@ -422,11 +422,13 @@ public:
         gen_properties["coverage"] = options.count("coverage") ? options["coverage"] : 100; options.erase("coverage");
 
         std::map<std::string, std::any> opt;
-        if(options.count("constraints")) {
+        if(options.count("constraints")) 
+        {
             opt["constraints"] =  options["constraints"];
             options.erase("constraints");
         }
-        if(options.count("choices")) {
+        if(options.count("choices")) 
+        {
             opt["choices"] =  options["choices"];
             options.erase("choices");
         }
@@ -604,34 +606,33 @@ private:
         std::shared_ptr<TestQueue<TestArguments>> result(new TestQueue<TestArguments>());
         std::shared_ptr<MethodInfo> method_info(new MethodInfo);
         std::shared_ptr<bool> method_info_ready(new bool(false));
- //       std::cout << "Method info size: " << method_info->arg_types.size() << std::endl;
 
-        std::function<size_t(void *data, size_t size, size_t nmemb)> data_cb = [this, result, method_info, method_info_ready](void *data, size_t size, size_t nmemb) -> size_t{
+        std::function<size_t(void *data, size_t size, size_t nmemb)> data_cb = [this, result, method_info, method_info_ready](void *data, size_t size, size_t nmemb) -> size_t {
             if(nmemb > 0)
             {
                 std::string test((char*) data, (char*) data + nmemb - 1); //last byte seem to be a new line character
-      //          std::cout << "Received line: " << test << std::endl;
+            //    std::cout << "Received line: " << test;
 
                 auto [name, value] = _parseTestLine(test);
-                if(name == "info" && *method_info_ready == false){
-                    std::cout << "Parsing test info line: " << value << std::endl;
+                if(name == "info" && *method_info_ready == false)
+                {
                     std::string method_signature = value.to_str();
                     std::replace(method_signature.begin(), method_signature.end(), '\'', '\"');
+
                     auto [name_1, value_1] = _parseTestLine(method_signature);
-                    if(name_1 == "method"){
-                        std::cout << "Parsing method info: " << value_1 << std::endl;
-                        std::cout << "Method info size: " << method_info->arg_types.size() << std::endl;
-                        if(_parseMethodInfo(value_1.to_str(), method_info)){
+                    if(name_1 == "method")
+                    {
+                        if(_parseMethodInfo(value_1.to_str(), method_info))
+                        {
                             *method_info_ready = true;
                         }
                     }
-                }else if(name == "testCase" && *method_info_ready){
+                }
+                else if(name == "testCase" && *method_info_ready)
+                {
                     result->insert(_parseTestCase(value, method_info));
                 }
 
-                //result->insert(std::vector<std::any>({5, 1}));
-                // std::vector<std::any> test((char*) data, (char*) data + nmemb - 1); //last byte seem to be a new line character
-                // result->insert(test);
             }
             return nmemb;
         };
@@ -671,9 +672,8 @@ private:
             exit (1);
         }
 
-
-
-        if (!PKCS12_parse(p12, _keystore_password.c_str(), &pkey, &cert, &ca)) {
+        if (!PKCS12_parse(p12, _keystore_password.c_str(), &pkey, &cert, &ca)) 
+        {
             fprintf(stderr, "Error parsing keystore file\n");
             ERR_print_errors_fp(stderr);
             exit (1);
@@ -681,21 +681,22 @@ private:
 
         PKCS12_free(p12);
 
-
-
-        if (pkey) {
+        if (pkey) 
+        {
             PEM_write_PrivateKey(pkey_file, pkey, NULL, NULL, 0, NULL, NULL);
 
             fclose(pkey_file);
 
         }
 
-        if (cert) {
+        if (cert) 
+        {
             PEM_write_X509(cert_file, cert);
             fclose(cert_file);
         }
 
-        if (ca && sk_X509_num(ca)) {
+        if (ca && sk_X509_num(ca)) 
+        {
             for (unsigned i = 0; i < sk_X509_num(ca); i++)
                 PEM_write_X509(ca_file, sk_X509_value(ca, i));
             fclose(ca_file);
@@ -705,18 +706,18 @@ private:
         X509_free(cert);
 
         EVP_PKEY_free(pkey);
-
-
     }
 
     std::string _randomFilename()
     {
 
         std::string result = "tmp";
+
         for(unsigned i = 0; i < 10; ++i)
         {
             result += static_cast<char>((std::rand() % ('z' - 'a')) + 'a');
         }
+
         return result;
     }
 
@@ -758,15 +759,18 @@ private:
             opt.erase("model");
         }
 
-        if(opt.count("template") > 0){
+        if(opt.count("template") > 0)
+        {
             url += ",\"template\":\"" + template_type_url_param(std::any_cast<TemplateType>(opt["template"])) + "\"";
             opt.erase("template");
         }
-        else if(requestType == "requestExport"){
+        else if(requestType == "requestExport")
+        {
             url += ",\"template\":\"CSV\"";
         }
 
-        if(opt.size() != 0){
+        if(opt.size() != 0)
+        {
             url += ",\"userData\":\"{";
             std::string padding = "";
             for(const std::pair<std::string, std::any>& option : opt){
@@ -781,14 +785,17 @@ private:
         // url += "%7D";
         url += "}";
 
-        try{
+        try
+        {
             url = std::regex_replace(url, std::regex("\\\""), "%22");
             url = std::regex_replace(url, std::regex("'"),  "%27");
             url = std::regex_replace(url, std::regex("\\{"),  "%7B");
             url = std::regex_replace(url, std::regex("\\}"),  "%7D");
             url = std::regex_replace(url, std::regex("\\["),  "%5B");
             url = std::regex_replace(url, std::regex("\\]"),  "%5D");
-        }catch (const std::regex_error& e){
+        }
+        catch (const std::regex_error& e)
+        {
             std::cerr << e.what() << std::endl;
         }
 
@@ -802,17 +809,17 @@ private:
         auto begin = line.find_first_of("(");
         auto end = line.find_last_of(")");
         auto args = line.substr(begin + 1, end - begin - 1);
-//        std::cout << "Parsing: " << args << std::endl;
-//        std::cout << "Method info size: " << method_info->arg_types.size() << std::endl;
+
         std::stringstream ss(args);
         std::string token;
-        while(std::getline(ss, token, ',')){
+        while(std::getline(ss, token, ','))
+        {
             token = token.substr(token.find_first_not_of(" "));
             std::string arg_type = token.substr(0, token.find(" "));
             std::string arg_name = token.substr(token.find(" ") + 1);
             method_info->arg_names.push_back(arg_name);
             method_info->arg_types.push_back(arg_type);
-            std::cout << "token: '" << token << "', arg type: '" << arg_type << "', arg name: '" << arg_name << "'" << std::endl;
+            // std::cout << "token: '" << token << "', arg type: '" << arg_type << "', arg name: '" << arg_name << "'" << std::endl;
         }
 
         return true;
@@ -900,19 +907,25 @@ private:
         std::string err = picojson::parse(v, line);
         picojson::value nothing;
 
-        if(false == err.empty()){
+        if (false == err.empty())
+        {
             std::cerr << "Cannot parse test line '" << line << "': " << err << std::endl;
         }
-        if (! v.is<picojson::object>()) {
+
+        if (! v.is<picojson::object>()) 
+        {
             std::cerr << "Error: received line is not a JSON object" << std::endl;
             return std::tie("", nothing);
         }
+
         const picojson::value::object& obj = v.get<picojson::object>();
+        
         if(obj.size() > 0)
         {
             auto value = *obj.begin();
             return std::tuple<std::string, picojson::value>(value.first, value.second);
         }
+
         return std::tie("", nothing);
     }
     //Deprecated:
@@ -991,7 +1004,7 @@ int main(int argc, char** argv){
     std::map<std::string, std::any> optionsNWise = {{"coverage", coverage}, {"n", n}, {"constraints", constraints}, {"choices", choices}};
     for(auto test : *tp.generateNwise("QuickStart.test", optionsNWise)) { 
       
-        std::cout << std::endl;
+        // std::cout << std::endl;
      }
 
     return 0;
