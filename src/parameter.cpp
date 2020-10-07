@@ -11,6 +11,21 @@ class TestArguments {
     int index = 0;
 
 public:
+
+    TestArguments()
+    {}
+
+    TestArguments(const TestArguments& testArguments)
+    {
+        core = testArguments.core;
+        index = testArguments.index;
+    }
+
+    ~TestArguments()
+    {}
+
+    friend std::ostream& operator<<(std::ostream& os, const TestArguments& testArguments);
+
     void add(std::string name, std::string type, std::string value) {
         core.insert({ name, std::make_tuple(index++, type, value) });
         // std::cout << "name:" << name << ", index:" << std::get<0>(core[name]) << ", type:" << std::get<1>(core[name]) << ", value:" << std::get<2>(core[name]) << std::endl;
@@ -71,7 +86,14 @@ private:
 
 std::ostream& operator<<(std::ostream& os, const TestArguments& testArguments)
 {
-    os << "test";
+    std::string output;
+    for (auto &x : testArguments.core) {
+        output += x.first + "|" + std::get<1>(x.second) + "|" + std::get<2>(x.second) + " : ";
+    }
+    output.resize(output.size() - 3);
+    
+    os << output;
+
     return os;
 }
 

@@ -3,40 +3,7 @@
 #include <iostream>
 #include<queue>
 
-class myTestFixture1: public ::testing::Test { 
-public: 
-    ecfeed::TestProvider* testProvider;
-
-    void SetUp() override { 
-        testProvider = new ecfeed::TestProvider(
-            "ZCPH-DFYI-R7R7-R6MM-89L8", 
-            "/home/krzysztof/Desktop/git/ecfeed.java/com.ecfeed.runner/src/test/resources/security.p12", 
-            "develop-gen.ecfeed.com");
-        }
-
-    void TearDown() override {
-        delete testProvider;
-    }
-};
-
-class ParameterizedEcFeedProviderFixture : public ::myTestFixture1, public ::testing::WithParamInterface<TestArguments> {};
-
-std::vector<std::string> test_parameters() {
-    ecfeed::TestProvider tp(
-        "ZCPH-DFYI-R7R7-R6MM-89L8", 
-        "/home/krzysztof/Desktop/git/ecfeed.java/com.ecfeed.runner/src/test/resources/security.p12", 
-        "develop-gen.ecfeed.com"
-    );
-
-    std::vector<std::string> data;
-    for (std::string element : *tp.exportNwise("QuickStart.test", ecfeed::TemplateType::CSV)) {
-        data.push_back(element);
-    }
-
-    return data;
-}
-
-std::vector<TestArguments> test_parameters_2() {
+std::vector<TestArguments> test_parameters() {
     ecfeed::TestProvider tp(
         "ZCPH-DFYI-R7R7-R6MM-89L8", 
         "/home/krzysztof/Desktop/git/ecfeed.java/com.ecfeed.runner/src/test/resources/security.p12", 
@@ -51,10 +18,11 @@ std::vector<TestArguments> test_parameters_2() {
     return data;
 }
 
+class ParameterizedEcFeedProviderFixture : public ::testing::TestWithParam<TestArguments> {};
 
-INSTANTIATE_TEST_CASE_P(testSuite, ParameterizedEcFeedProviderFixture, ::testing::ValuesIn(test_parameters_2()));
+INSTANTIATE_TEST_CASE_P(testSuite, ParameterizedEcFeedProviderFixture, ::testing::ValuesIn(test_parameters()));
 TEST_P(ParameterizedEcFeedProviderFixture, testProvider1) {
 
    std::cout << GetParam() << std::endl;
-   std::cout << "test" << std::endl;
+
 }
