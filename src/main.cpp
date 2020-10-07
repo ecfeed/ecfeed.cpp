@@ -856,13 +856,6 @@ private:
            return result;
        }
 
-//        const picojson::value::object& obj = test.get<picojson::array>();
-//        if(obj.size() > 0)
-//        {
-//            auto value = obj[""];
-////            return std::tuple<std::string, std::string>(value.first, value.second.to_str());
-//        }
-
         return result;
     }
 

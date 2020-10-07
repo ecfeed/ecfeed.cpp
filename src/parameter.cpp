@@ -7,30 +7,27 @@
 #include <string>
 
 class TestArguments {
-    std::map<std::string, std::tuple<int, std::string, std::string>> core;
-    int index = 0;
+    std::vector<std::tuple<std::string, std::string, std::string>> core;
 
 public:
-
     friend std::ostream& operator<<(std::ostream& os, const TestArguments& testArguments);
 
     void add(std::string name, std::string type, std::string value) {
-        core.insert({ name, std::make_tuple(index++, type, value) });
-        // std::cout << "name:" << name << ", index:" << std::get<0>(core[name]) << ", type:" << std::get<1>(core[name]) << ", value:" << std::get<2>(core[name]) << std::endl;
+        core.push_back(std::make_tuple(name, type, value));
     }
 
     template<typename T>
-    T get(std::string name) const {
-        std::tuple<int, std::string, std::string> argument = core.at(name);
+    T get(int index) const {
+        std::tuple<std::string, std::string, std::string> argument = core.at(index);
 
         return parse<T>(std::get<1>(argument), std::get<2>(argument));
     }
 
     template<typename T>
-    T get(int index) const {
-        for (auto &x : core) {
-	        if (std::get<0>(x.second) == index) {
-                return get<T>(x.first);
+    T get(std::string name) const {
+        for (int i = 0 ; i < core.size() ; i++) {
+	        if (std::get<0>(core.at(i)) == name) {
+                return get<T>(i);
             }
         }
 
@@ -50,24 +47,19 @@ private:
     template<typename T>
     T parse(std::string type, std::string value) const {
 
-        if (type == "String") return cast<T>(value);
-        else if (type == "char") return cast<T>(static_cast<char>(value.at(0)));
-        else if (type == "short") return cast<T>(static_cast<short>(std::stoi(value)));
-        else if (type == "byte") return cast<T>(std::stoi(value));
-        else if (type == "int") return cast<T>(std::stoi(value));
-        else if (type == "long") return cast<T>(std::stol(value));
-        else if (type == "float") return cast<T>(std::stof(value));
-        else if (type == "double") return cast<T>(std::stod(value));
-        else if (type == "boolean") return cast<T>(value == "true");
+        if (type == "String") return std::any_cast<T>(value);
+        else if (type == "char") return std::any_cast<T>(static_cast<char>(value.at(0)));
+        else if (type == "short") return std::any_cast<T>(static_cast<short>(std::stoi(value)));
+        else if (type == "byte") return std::any_cast<T>(std::stoi(value));
+        else if (type == "int") return std::any_cast<T>(std::stoi(value));
+        else if (type == "long") return std::any_cast<T>(std::stol(value));
+        else if (type == "float") return std::any_cast<T>(std::stof(value));
+        else if (type == "double") return std::any_cast<T>(std::stod(value));
+        else if (type == "boolean") return std::any_cast<T>(value == "true");
         else {
             std::cerr << "Unknown parameter type: " << type << ". Converting the parameter to String\n";
-            return cast<T>(value);
+            return std::any_cast<T>(value);
         }
-    }
-
-    template<typename T>
-    T cast(std::any element) const {
-        return std::any_cast<T>(element);
     }
 
 };
@@ -77,9 +69,9 @@ std::ostream& operator<<(std::ostream& os, const TestArguments& testArguments)
     // std::stringstream output;
     std::string output;
     for (auto &x : testArguments.core) {
-        output += x.first + "|" + std::get<1>(x.second) + "|" + std::get<2>(x.second) + " : ";
+        output += std::get<1>(x) + " " + std::get<0>(x) + " = " + std::get<2>(x) + "; ";
     }
-    output.resize(output.size() - 3);
+    output.resize(output.size() - 2);
     os << output;
 
     return os;
