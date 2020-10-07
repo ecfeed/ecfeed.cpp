@@ -12,18 +12,6 @@ class TestArguments {
 
 public:
 
-    TestArguments()
-    {}
-
-    TestArguments(const TestArguments& testArguments)
-    {
-        core = testArguments.core;
-        index = testArguments.index;
-    }
-
-    ~TestArguments()
-    {}
-
     friend std::ostream& operator<<(std::ostream& os, const TestArguments& testArguments);
 
     void add(std::string name, std::string type, std::string value) {
@@ -86,12 +74,12 @@ private:
 
 std::ostream& operator<<(std::ostream& os, const TestArguments& testArguments)
 {
+    // std::stringstream output;
     std::string output;
     for (auto &x : testArguments.core) {
         output += x.first + "|" + std::get<1>(x.second) + "|" + std::get<2>(x.second) + " : ";
     }
     output.resize(output.size() - 3);
-    
     os << output;
 
     return os;
