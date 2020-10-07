@@ -473,6 +473,38 @@ public:
         return _export(method, opt);
     }
 
+    std::shared_ptr<TestQueue<TestArguments>> generatePairwise(const std::string& method,
+                                                                    std::map<std::string, std::any> options = {})
+    {
+        std::map<std::string, std::any> gen_properties;
+
+        gen_properties["coverage"] = options.count("coverage") ? options["coverage"] : 100; options.erase("coverage");
+
+        std::map<std::string, std::any> opt;
+        if(options.count("constraints")) 
+        {
+            opt["constraints"] =  options["constraints"];
+            options.erase("constraints");
+        }
+        if(options.count("choices")) 
+        {
+            opt["choices"] =  options["choices"];
+            options.erase("choices");
+        }
+        opt["dataSource"] = DataSource::NWISE;
+        opt["properties"] = gen_properties;
+
+        if(options.size())
+        {
+            std::cerr << "Unknown options: ";
+            for(const auto& option : options){
+                std::cerr << " " << option.first << " " ;
+            }
+        }
+
+        return _generate(method, opt);
+    }
+
     std::shared_ptr<TestQueue<std::string>> exportRandom(const std::string& method,
                                                          std::map<std::string, std::any> options = {})
     {
@@ -508,6 +540,40 @@ public:
         return _export(method, opt);
     }
 
+    std::shared_ptr<TestQueue<TestArguments>> generateRandom(const std::string& method,
+                                                                    std::map<std::string, std::any> options = {})
+    {
+        std::map<std::string, std::any> gen_properties;
+
+        gen_properties["length"] = options.count("length") ? options["length"] : 100; options.erase("length");
+        gen_properties["duplicates"] = options.count("duplicates") ? options["duplicates"] : std::set<std::string>({}); options.erase("duplicates");
+        gen_properties["adaptive"] = options.count("adaptive") ? options["adaptive"] : std::map<std::string, std::set<std::string>>({}); options.erase("adaptive");
+
+        std::map<std::string, std::any> opt;
+        if(options.count("constraints")) 
+        {
+            opt["constraints"] =  options["constraints"];
+            options.erase("constraints");
+        }
+        if(options.count("choices")) 
+        {
+            opt["choices"] =  options["choices"];
+            options.erase("choices");
+        }
+        opt["dataSource"] = DataSource::RANDOM;
+        opt["properties"] = gen_properties;
+
+        if(options.size())
+        {
+            std::cerr << "Unknown options: ";
+            for(const auto& option : options){
+                std::cerr << " " << option.first << " " ;
+            }
+        }
+
+        return _generate(method, opt);
+    }
+
     std::shared_ptr<TestQueue<std::string>> exportCartesian(const std::string& method,
                                                             std::map<std::string, std::any> options = {})
     {
@@ -534,6 +600,36 @@ public:
         return _export(method, opt);
     }
 
+    std::shared_ptr<TestQueue<TestArguments>> generateCartesian(const std::string& method,
+                                                                    std::map<std::string, std::any> options = {})
+    {
+        std::map<std::string, std::any> gen_properties;
+
+        std::map<std::string, std::any> opt;
+        if(options.count("constraints")) 
+        {
+            opt["constraints"] =  options["constraints"];
+            options.erase("constraints");
+        }
+        if(options.count("choices")) 
+        {
+            opt["choices"] =  options["choices"];
+            options.erase("choices");
+        }
+        opt["dataSource"] = DataSource::CARTESIAN;
+        opt["properties"] = gen_properties;
+
+        if(options.size())
+        {
+            std::cerr << "Unknown options: ";
+            for(const auto& option : options){
+                std::cerr << " " << option.first << " " ;
+            }
+        }
+
+        return _generate(method, opt);
+    }
+
     std::shared_ptr<TestQueue<std::string>> exportStatic(const std::string& method,
                                                          std::set<std::string> test_suites = {})
     {
@@ -549,6 +645,18 @@ public:
         return _export(method, opt);
     }
 
+    std::shared_ptr<TestQueue<TestArguments>> generateStatic(const std::string& method,
+                                                                    std::set<std::string> test_suites = {})
+    {
+        std::map<std::string, std::any> gen_properties;
+
+        std::map<std::string, std::any> opt = {};
+        opt["testSuites"] = test_suites;
+        opt["dataSource"] = DataSource::STATIC_DATA;
+        opt["properties"] = gen_properties;
+
+        return _generate(method, opt);
+    }
 
 private:
     void _performRequest(const std::string& url,

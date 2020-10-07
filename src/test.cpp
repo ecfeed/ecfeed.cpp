@@ -3,14 +3,15 @@
 #include <iostream>
 #include<queue>
 
-std::vector<TestArguments> test_parameters() {
+std::deque<TestArguments> test_parameters() {
     ecfeed::TestProvider tp(
         "ZCPH-DFYI-R7R7-R6MM-89L8", 
         "/home/krzysztof/Desktop/git/ecfeed.java/com.ecfeed.runner/src/test/resources/security.p12", 
         "develop-gen.ecfeed.com"
     );
-
-    std::vector<TestArguments> data;
+// tp.generateNwise("QuickStart.test").get()->begin();
+// tp.generateNwise("QuickStart.test").get()->end();
+    std::deque<TestArguments> data;
     for (TestArguments element : *tp.generateNwise("QuickStart.test")) {
         data.push_back(element);
     }

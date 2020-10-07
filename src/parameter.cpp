@@ -66,13 +66,9 @@ private:
 
 std::ostream& operator<<(std::ostream& os, const TestArguments& testArguments)
 {
-    // std::stringstream output;
-    std::string output;
     for (auto &x : testArguments.core) {
-        output += std::get<1>(x) + " " + std::get<0>(x) + " = " + std::get<2>(x) + "; ";
+        os << std::get<1>(x) << " " << std::get<0>(x) << " = " << std::get<2>(x) << "; ";
     }
-    output.resize(output.size() - 2);
-    os << output;
 
     return os;
 }
