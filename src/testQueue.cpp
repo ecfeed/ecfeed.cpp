@@ -1,14 +1,13 @@
 template<typename T>
 class TestQueue
 {
-    class const_iterator
+    class const_iterator : public std::iterator<std::forward_iterator_tag, TestQueue>
     {
         const bool END_ITERATOR;
         TestQueue<T>& _queue;
         
     public:
-        typedef T value_type;
-    
+        
         const_iterator(TestQueue<T>& queue, bool end = false) :
             _queue(queue), END_ITERATOR(end)
         {}
@@ -56,6 +55,8 @@ class TestQueue
     std::condition_variable _cv;
 
 public:
+    typedef T value_type;
+
     TestQueue() :
         _done(false),
         _begin(*this),
@@ -71,10 +72,10 @@ public:
     bool done() {
         std::unique_lock<std::mutex> cv_lock(_mutex);
 
-        if(_data.size() != 0) {
+        if (_data.size() != 0) {
             return false;
         }
-        else if(_done) {
+        else if (_done) {
             return true;
         }
 
@@ -99,7 +100,7 @@ public:
     T& current_element() 
     {
         std::unique_lock<std::mutex> cv_lock(_mutex);
-        if(_data.size() > 0) {
+        if (_data.size() > index) {
             return _data[0];
         }
         _cv.wait(cv_lock);
@@ -119,4 +120,14 @@ public:
         return _data.size() == 0;
     }
 
+    std::vector<T> toList() 
+    {
+        std::unique_lock<std::mutex> cv_lock(_mutex);
+
+        while (!_done) {
+            _cv.wait(cv_lock);
+        }
+
+        return _data;
+    }
 };

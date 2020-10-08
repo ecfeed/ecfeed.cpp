@@ -14,6 +14,7 @@ public:
     void add(std::string name, std::string type, std::string value) 
     {
         core.push_back(std::make_tuple(name, type, value));
+        // std::cout << "name:" << name << ", type:" << type << ", value:" << value << std::endl;
     }
 
     template<typename T>
@@ -22,6 +23,17 @@ public:
         std::tuple<std::string, std::string, std::string> argument = core.at(index);
 
         return parse<T>(std::get<1>(argument), std::get<2>(argument));
+    }
+
+    template<typename T>
+    T get(std::string name) const {
+        for (int i = 0 ; i < core.size() ; i++) {
+	        if (std::get<0>(core.at(i)) == name) {
+                return get<T>(i);
+            }
+        }
+
+        throw std::invalid_argument("Invalid argument name");
     }
 
     std::string getString(int index) const 
@@ -52,6 +64,36 @@ public:
     int getInt(int index) const 
     { 
         return get<int>(index); 
+    }
+
+    std::string getString(std::string name) const 
+    { 
+        return get<std::string>(name); 
+    }
+
+    bool getBool(std::string name) const 
+    { 
+        return get<bool>(name); 
+    }
+
+    double getDouble(std::string name) const 
+    { 
+        return get<double>(name); 
+    }
+
+    double getFloat(std::string name) const 
+    { 
+        return get<float>(name); 
+    }
+
+    int getLong(std::string name) const 
+    { 
+        return get<long>(name); 
+    }
+
+    int getInt(std::string name) const 
+    { 
+        return get<int>(name); 
     }
 
 private:

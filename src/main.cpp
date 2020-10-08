@@ -25,6 +25,7 @@
 #include<any>
 #include<future>
 #include<tuple>
+#include <unistd.h>
 #include "testArguments.cpp"
 
 struct memory {
@@ -191,56 +192,4 @@ class TestProvider;
 #include "testQueue.cpp"
 #include "testProvider.cpp"
 
-}//namespace ecfeed
-
-// int main(int argc, char** argv){
-// g++-8 -pthread -std=c++17 -o ecfeed src/main.cpp -lcurl -lcrypto -lstdc++fs && ./ecfeed
-// auto q_0 = tp.exportNwise("QuickStart.test"); // Ambiguous.
-
-    // ecfeed::TestProvider tp(
-    //     "ZCPH-DFYI-R7R7-R6MM-89L8", 
-    //     "/home/krzysztof/Desktop/git/ecfeed.java/com.ecfeed.runner/src/test/resources/security.p12", 
-    //     "develop-gen.ecfeed.com"
-    // );
-
-    // for(std::string test : *tp.exportNwise("QuickStart.test", ecfeed::TemplateType::CSV)) { std::cout << test << std::endl; }
-    // for(auto test : *tp.exportNwise("QuickStart.test", ecfeed::TemplateType::XML)) { std::cout << test << std::endl; }
-    // for(auto test : *tp.exportNwise("QuickStart.test", ecfeed::TemplateType::JSON)) { std::cout << test << std::endl; }
-    // for(auto test : *tp.exportNwise("QuickStart.test", ecfeed::TemplateType::Gherkin)) { std::cout << test << std::endl; }
-    // for(auto test : *tp.exportNwise("QuickStart.test", ecfeed::TemplateType::RAW)) { std::cout << test << std::endl; }
-
-    // int n = 2;
-    // int coverage = 100;
-    // int length = 50;    // The generation should be stopped before reaching the limit.
-    // bool duplicates = true;
-    // bool adaptive = true;
-    // ecfeed::TemplateType template_type = ecfeed::TemplateType::CSV;
-    // std::set<std::string> constraints = {"constraint1"};    // Missing std::string options.
-    // std::set<std::string> test_suites = {"suite1"};    // Missing std::string options.
-    // std::map<std::string, std::set<std::string>> choices = {{"arg1", {"choice1", "choice2"}}, {"arg2", {"choice1"}}};   // Missing std::string options.
-    
-    // std::map<std::string, std::any> optionsNWise = {{"template", template_type}, {"coverage", coverage}, {"n", n}, {"constraints", constraints}, {"choices", choices}};
-    // for(auto test : *tp.exportNwise("QuickStart.test", template_type, n, coverage, constraints, choices)) { std::cout << test << std::endl; }
-    // for(auto test : *tp.exportNwise("QuickStart.test", optionsNWise)) { std::cout << test << std::endl; }
-    
-    // std::map<std::string, std::any> optionsPairwise = {{"template", template_type}, {"coverage", coverage}, {"constraints", constraints}, {"choices", choices}};
-    // for(auto test : *tp.exportPairwise("QuickStart.test", optionsPairwise)) { std::cout << test << std::endl; }
-
-    // std::map<std::string, std::any> optionsRandom = {{"template", template_type}, {"length", length}, {"duplicates", duplicates}, {"adaptive", adaptive}, {"constraints", constraints}, {"choices", choices}};
-    // for(auto test : *tp.exportRandom("QuickStart.test", optionsRandom)) { std::cout << test << std::endl; }
-    
-    // std::map<std::string, std::any> optionsCartesian = {{"template", template_type}, {"constraints", constraints}, {"choices", choices}};
-    // for(auto test : *tp.exportCartesian("QuickStart.test", optionsCartesian)) { std::cout << test << std::endl; }
-    
-    // for(auto test : *tp.exportStatic("QuickStart.test", test_suites)) { std::cout << test << std::endl; }   // Shouldn't it be like everything else, i.e 'options'?
-    // We can use test suites with constraints/choices.
-
-
-//     std::map<std::string, std::any> optionsNWise = {{"coverage", coverage}, {"n", n}, {"constraints", constraints}, {"choices", choices}};
-//     for(auto test : *tp.generateNwise("QuickStart.test", optionsNWise)) { 
-      
-//         std::cout << "test" << std::endl;
-//      }
-
-//     return 0;
-// }
+}
