@@ -79,7 +79,7 @@ class FixtureExport : public ::testing::TestWithParam<std::string> {};
 //    std::cout << GetParam() << std::endl;
 // }
 
-// INSTANTIATE_TEST_CASE_P(Generate, FixtureExport, ::testing::ValuesIn((testProvider.exportStatic(method, optionsExportStatic))->toList()));
-// TEST_P(FixtureExport, Static) {
-//    std::cout << GetParam() << std::endl;
-// }
+INSTANTIATE_TEST_CASE_P(Generate, FixtureExport, ::testing::ValuesIn((testProvider.exportStatic(method, optionsExportStatic))->toList()));
+TEST_P(FixtureExport, Static) {
+   std::cout << GetParam() << std::endl;
+}

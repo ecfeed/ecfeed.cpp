@@ -193,3 +193,14 @@ class TestProvider;
 #include "testProvider.cpp"
 
 }
+
+// int main(int argc, char** argv){
+
+//     ecfeed::TestProvider tp("V0G6-MHNQ-PDSR-G2WB-XOKV");
+
+//     for (auto test : *tp.generateNwise("QuickStart.test")) { 
+//         std::cout << test << std::endl;
+//      }
+
+//     return 0;
+// }

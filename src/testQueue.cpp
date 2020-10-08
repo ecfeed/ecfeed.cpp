@@ -100,7 +100,7 @@ public:
     T& current_element() 
     {
         std::unique_lock<std::mutex> cv_lock(_mutex);
-        if (_data.size() > index) {
+        if (_data.size() > 0) {
             return _data[0];
         }
         _cv.wait(cv_lock);
