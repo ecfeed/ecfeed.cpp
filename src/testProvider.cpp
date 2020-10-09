@@ -36,18 +36,7 @@ public:
         _cert_path(_temp_dir / _randomFilename()),
         _ca_path(_temp_dir   / _randomFilename())
     {
-        if (keystore_path == "") {
-            std::string homepath = getenv("HOME");
-            if ( access( (homepath + "/.ecfeed/security.p12").c_str(), F_OK ) != -1 ) {
-                _keystore_path = homepath + "/.ecfeed/security.p12";
-            } else if (access( (homepath + "/ecfeed/security.p12").c_str(), F_OK ) != -1) {
-                _keystore_path = homepath + "/ecfeed/security.p12";
-            } else {
-                throw std::invalid_argument("Invalid key store path");
-            }
-        } else {
-            _keystore_path = keystore_path;
-        }
+        _keystore_path = getKeyStore(keystore_path);
 
         OpenSSL_add_all_algorithms();
         ERR_load_CRYPTO_strings();
@@ -186,6 +175,22 @@ public:
      
 private:
 
+    std::string getKeyStore(std::string keystore_path = "") {
+
+        if (keystore_path == "") {
+            std::string homepath = getenv("HOME");
+            if ( access( (homepath + "/.ecfeed/security.p12").c_str(), F_OK ) != -1 ) {
+                return homepath + "/.ecfeed/security.p12";
+            } else if (access( (homepath + "/ecfeed/security.p12").c_str(), F_OK ) != -1) {
+                return homepath + "/ecfeed/security.p12";
+            } else {
+                throw std::invalid_argument("Invalid key store path");
+            }
+        } else {
+            return keystore_path;
+        }
+    }
+
     std::map<std::string, std::any> setupNwise(std::map<std::string, std::any> options) 
     {
         std::map<std::string, std::any> properties;
@@ -322,7 +327,7 @@ private:
             //    std::cout << "Received line: " << test;
 
                 auto [name, value] = _parseTestLine(test);
-                if (name == "info" && *method_info_ready == false) {
+                if (name == "info" && value.to_str() != "alive" && *method_info_ready == false) {
                     std::string method_signature = value.to_str();
                     std::replace(method_signature.begin(), method_signature.end(), '\'', '\"');
 
@@ -550,11 +555,12 @@ private:
         picojson::value nothing;
 
         if (false == err.empty()) {
-//            std::cerr << "Cannot parse test line '" << line << "': " << err << std::endl;
+            std::cerr << "Cannot parse test line '" << line << "': " << err << std::endl;
+            return std::tie("", nothing);
         }
 
         if (! v.is<picojson::object>()) {
- //           std::cerr << "Error: received line is not a JSON object" << std::endl;
+            std::cerr << "Error: received line is not a JSON object" << std::endl;
             return std::tie("", nothing);
         }
 

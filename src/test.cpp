@@ -32,10 +32,10 @@ std::string method = "QuickStart.test";
 
 class FixtureGenerate : public ::testing::TestWithParam<TestArguments> {};
 
-// INSTANTIATE_TEST_CASE_P(Generate, FixtureGenerate, ::testing::ValuesIn((testProvider.generateNwise(method, optionsGenerateNWise))->toList()));
-// TEST_P(FixtureGenerate, NWise) {
-//    std::cout << GetParam() << std::endl;
-// }
+INSTANTIATE_TEST_CASE_P(Generate, FixtureGenerate, ::testing::ValuesIn((testProvider.generateNwise(method, optionsGenerateNWise))->toList()));
+TEST_P(FixtureGenerate, NWise) {
+   std::cout << GetParam() << std::endl;
+}
 
 // INSTANTIATE_TEST_CASE_P(Generate, FixtureGenerate, ::testing::ValuesIn((testProvider.generatePairwise(method, optionsGeneratePairwise))->toList()));
 // TEST_P(FixtureGenerate, Pairwise) {
@@ -79,7 +79,7 @@ class FixtureExport : public ::testing::TestWithParam<std::string> {};
 //    std::cout << GetParam() << std::endl;
 // }
 
-INSTANTIATE_TEST_CASE_P(Generate, FixtureExport, ::testing::ValuesIn((testProvider.exportStatic(method, optionsExportStatic))->toList()));
-TEST_P(FixtureExport, Static) {
-   std::cout << GetParam() << std::endl;
-}
+// INSTANTIATE_TEST_CASE_P(Generate, FixtureExport, ::testing::ValuesIn((testProvider.exportStatic(method, optionsExportStatic))->toList()));
+// TEST_P(FixtureExport, Static) {
+//    std::cout << GetParam() << std::endl;
+// }
