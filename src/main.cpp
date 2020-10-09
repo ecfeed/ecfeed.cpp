@@ -26,7 +26,6 @@
 #include<future>
 #include<tuple>
 #include <unistd.h>
-#include "testArguments.cpp"
 
 struct memory {
     char *response;
@@ -192,20 +191,28 @@ static size_t curl_data_callback(void *data, size_t size, size_t nmemb, void *us
     return callback->operator()(data, size, nmemb);
 }
 
-class TestProvider;
+struct MethodInfo
+{
+    std::vector<std::string> arg_names;
+    std::vector<std::string> arg_types;
+};
 
+#include "testArguments.cpp"
 #include "testQueue.cpp"
 #include "testProvider.cpp"
-
 }
 
-// int main(int argc, char** argv){
+int main(int argc, char** argv){
 
-//     ecfeed::TestProvider tp("V0G6-MHNQ-PDSR-G2WB-XOKV");
+    ecfeed::TestProvider tp("V0G6-MHNQ-PDSR-G2WB-XOKV");
 
-//     for (auto test : *tp.generateNwise("QuickStart.test")) { 
-//         std::cout << test << std::endl;
-//      }
+     for (auto test : tp.getArgumentTypes("QuickStart.test")) { 
+        std::cout << test << std::endl;
+     }
 
-//     return 0;
-// }
+     for (auto test : tp.getArgumentNames("QuickStart.test")) { 
+        std::cout << test << std::endl;
+     }
+
+    return 0;
+}

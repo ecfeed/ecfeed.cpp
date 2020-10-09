@@ -30,7 +30,7 @@ std::map<std::string, std::any> optionsExportStatic = {{"template", template_typ
 ecfeed::TestProvider testProvider("V0G6-MHNQ-PDSR-G2WB-XOKV");
 std::string method = "General.testMethod";
 
-class FixtureGenerate : public ::testing::TestWithParam<TestArguments> {};
+class FixtureGenerate : public ::testing::TestWithParam<ecfeed::TestArguments> {};
 
 // INSTANTIATE_TEST_CASE_P(Generate, FixtureGenerate, ::testing::ValuesIn((testProvider.generateNwise(method, optionsGenerateNWise))->toList()));
 // TEST_P(FixtureGenerate, NWise) {

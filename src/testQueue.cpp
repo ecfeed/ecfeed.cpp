@@ -53,6 +53,7 @@ class TestQueue
     std::mutex _mutex;
     std::mutex _cv_mutex;
     std::condition_variable _cv;
+    MethodInfo method_info;
 
 public:
     typedef T value_type;
@@ -129,5 +130,21 @@ public:
         }
 
         return _data;
+    }
+
+    void setMethodInfo(MethodInfo& method_info)
+    {
+        this->method_info = method_info;
+    }
+
+    MethodInfo& getMethodInfo()
+    {
+        std::unique_lock<std::mutex> cv_lock(_mutex);
+
+        while (!_done) {
+            _cv.wait(cv_lock);
+        }
+        
+        return method_info;
     }
 };

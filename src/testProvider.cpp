@@ -1,12 +1,7 @@
+
+
 class TestProvider
 {
-
-    struct MethodInfo
-    {
-        std::vector<std::string> arg_names;
-        std::vector<std::string> arg_types;
-    };
-    
     std::string _keystore_path;
     const std::string _genserver;
     const std::string _keystore_password;
@@ -64,21 +59,12 @@ public:
 
     std::vector<std::string> getArgumentNames(const std::string& method, const std::string& model = "")
     {
-        std::lock_guard<std::mutex> lock(_mutex);
-
-        exportRandom(method, {{"template", TemplateType::RAW},
-                              {"length", 0},
-                              {"adaptive", false},
-                              {"duplicates", true}});
-
-        return std::vector<std::string>();
+        return generateRandom(method, {{"length", 0}, {"adaptive", false}, {"duplicates", true}})->getMethodInfo().arg_names;
     }
 
     std::vector<std::string> getArgumentTypes(const std::string& method, const std::string& model = "")
     {
-        std::lock_guard<std::mutex> lock(_mutex);
-
-        return std::vector<std::string>();
+        return generateRandom(method, {{"length", 0}, {"adaptive", false}, {"duplicates", true}})->getMethodInfo().arg_types;
     }
 
     std::shared_ptr<TestQueue<std::string>> exportNwise(const std::string& method, std::map<std::string, std::any> options = {})
@@ -332,6 +318,7 @@ private:
                     if (name_1 == "method") {
                         if (_parseMethodInfo(value_1.to_str(), method_info)) {
                             *method_info_ready = true;
+                            result->setMethodInfo(*method_info);
                         }
                     }
                 }
@@ -527,7 +514,7 @@ private:
                     result.add(method_info->arg_names[arg_index], method_info->arg_types[arg_index], value);
                 } 
                 catch(const std::exception& e) {
-                    std::cerr << "Exception caught: " << e.what() << ". Too many parameters in the test: " << test << std::endl;
+                   std::cerr << "Exception caught: " << e.what() << ". Too many parameters in the test: " << test.to_str() << std::endl;
                 }
 
                 arg_index++;
