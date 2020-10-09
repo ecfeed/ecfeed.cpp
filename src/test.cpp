@@ -11,7 +11,7 @@ bool adaptive = true;
 ecfeed::TemplateType template_type = ecfeed::TemplateType::JSON;
 std::set<std::string> constraints = {"constraint1"};    // Missing std::string options.
 std::set<std::string> test_suites = {"suite1"};    // Missing std::string options.
-std::map<std::string, std::set<std::string>> choices = {{"arg1", {"choice1", "choice2"}}, {"arg2", {"choice1"}}};   // Missing std::string options.
+std::map<std::string, std::set<std::string>> choices = {{"arg0", {"choice1", "choice2"}}, {"arg1", {"choice1", "choice2"}}};   // Missing std::string options.
 
 std::map<std::string, std::any> optionsGenerateNWise = {{"coverage", coverage}, {"n", n}, {"constraints", constraints}, {"choices", choices}};
 std::map<std::string, std::any> optionsGeneratePairwise = {{"coverage", coverage}, {"constraints", constraints}, {"choices", choices}};
@@ -28,24 +28,25 @@ std::map<std::string, std::any> optionsExportStatic = {{"template", template_typ
 // -----------------------------------------------------------------------------------------------------------------------------
 
 ecfeed::TestProvider testProvider("V0G6-MHNQ-PDSR-G2WB-XOKV");
-std::string method = "QuickStart.test";
+std::string method = "General.testMethod";
 
 class FixtureGenerate : public ::testing::TestWithParam<TestArguments> {};
 
-INSTANTIATE_TEST_CASE_P(Generate, FixtureGenerate, ::testing::ValuesIn((testProvider.generateNwise(method, optionsGenerateNWise))->toList()));
-TEST_P(FixtureGenerate, NWise) {
-   std::cout << GetParam() << std::endl;
-}
+// INSTANTIATE_TEST_CASE_P(Generate, FixtureGenerate, ::testing::ValuesIn((testProvider.generateNwise(method, optionsGenerateNWise))->toList()));
+// TEST_P(FixtureGenerate, NWise) {
+//    std::cout << GetParam() << std::endl;
+// }
 
 // INSTANTIATE_TEST_CASE_P(Generate, FixtureGenerate, ::testing::ValuesIn((testProvider.generatePairwise(method, optionsGeneratePairwise))->toList()));
 // TEST_P(FixtureGenerate, Pairwise) {
 //    std::cout << GetParam() << std::endl;
 // }
 
-// INSTANTIATE_TEST_CASE_P(Generate, FixtureGenerate, ::testing::ValuesIn((testProvider.generateCartesian(method, optionsGenerateCartesian))->toList()));
-// TEST_P(FixtureGenerate, Cartesian) {
-//    std::cout << GetParam() << std::endl;
-// }
+INSTANTIATE_TEST_CASE_P(Generate, FixtureGenerate, ::testing::ValuesIn((testProvider.generateCartesian(method, optionsGenerateCartesian))->toList()));
+TEST_P(FixtureGenerate, Cartesian) {
+   std::cout << GetParam() << std::endl;
+   std::cout << GetParam().getString("arg1") << std::endl;
+}
 
 // INSTANTIATE_TEST_CASE_P(Generate, FixtureGenerate, ::testing::ValuesIn((testProvider.generateRandom(method, optionsGenerateRandom))->toList()));
 // TEST_P(FixtureGenerate, Random) {

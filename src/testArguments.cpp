@@ -14,7 +14,6 @@ public:
     void add(std::string name, std::string type, std::string value) 
     {
         core.push_back(std::make_tuple(name, type, value));
-        // std::cout << "name:" << name << ", type:" << type << ", value:" << value << std::endl;
     }
 
     template<typename T>

@@ -267,8 +267,6 @@ private:
 
     void _performRequest(const std::string& url, const std::function<size_t(void *data, size_t size, size_t nmemb)>* data_callback)
     {
-        // std::cout << "Request URL: " << url << std::endl << std::endl;
-
         char error_buf[128];
         curl_easy_setopt(_curl_handle, CURLOPT_SSLCERT, _cert_path.string().c_str());
         curl_easy_setopt(_curl_handle, CURLOPT_SSLCERTTYPE, "pem");
@@ -323,8 +321,7 @@ private:
 
         std::function<size_t(void *data, size_t size, size_t nmemb)> data_cb = [this, result, method_info, method_info_ready](void *data, size_t size, size_t nmemb) -> size_t {
             if (nmemb > 0) {
-                std::string test((char*) data, (char*) data + nmemb - 1); //last byte seem to be a new line character
-            //    std::cout << "Received line: " << test;
+                std::string test((char*) data, (char*) data + nmemb - 1);
 
                 auto [name, value] = _parseTestLine(test);
                 if (name == "info" && value.to_str() != "alive" && *method_info_ready == false) {
@@ -472,14 +469,12 @@ private:
             url += ",\"userData\":\"{";
             std::string padding = "";
             for(const std::pair<std::string, std::any>& option : opt){
-                std::cout << "Serializing: " << option.first << std::endl;
                 url += padding + options::serialize(option);
                 padding = ",";
             }
             url += "}\"";
         }
 
-        // url += "%7D";
         url += "}";
 
         try {
@@ -513,7 +508,6 @@ private:
             std::string arg_name = token.substr(token.find(" ") + 1);
             method_info->arg_names.push_back(arg_name);
             method_info->arg_types.push_back(arg_type);
-            // std::cout << "token: '" << token << "', arg type: '" << arg_type << "', arg name: '" << arg_name << "'" << std::endl;
         }
 
         return true;
