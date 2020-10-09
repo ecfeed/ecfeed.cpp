@@ -53,15 +53,19 @@ class TestQueue
     std::mutex _mutex;
     std::mutex _cv_mutex;
     std::condition_variable _cv;
-    MethodInfo method_info;
+
+    MethodInfo _method_info;
+    bool _method_info_ready;
 
 public:
+
     typedef T value_type;
 
     TestQueue() :
         _done(false),
         _begin(*this),
-        _end(*this, true)
+        _end(*this, true),
+        _method_info_ready(false)
     {}
 
     const_iterator begin() const {return _begin;}
@@ -132,19 +136,43 @@ public:
         return _data;
     }
 
-    void setMethodInfo(MethodInfo& method_info)
+    std::vector<std::string> getArgumentTypes()
     {
-        this->method_info = method_info;
+        std::unique_lock<std::mutex> cv_lock(_mutex);
+
+        while (!getMethodInfoReady()) {
+            _cv.wait(cv_lock);
+        }
+
+        return _method_info.arg_types;
+    }
+    
+    std::vector<std::string> getArgumentNames()
+    {
+        std::unique_lock<std::mutex> cv_lock(_mutex);
+
+        while (!getMethodInfoReady()) {
+            _cv.wait(cv_lock);
+        }
+
+        return _method_info.arg_names;
+    }
+
+private:
+
+    void setMethodInfoReady()
+    {
+        _method_info_ready = true;
+    }
+
+    bool& getMethodInfoReady() 
+    {
+        return _method_info_ready;
     }
 
     MethodInfo& getMethodInfo()
     {
-        std::unique_lock<std::mutex> cv_lock(_mutex);
-
-        while (!_done) {
-            _cv.wait(cv_lock);
-        }
-        
-        return method_info;
+        return _method_info;
     }
+
 };

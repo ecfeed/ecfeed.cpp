@@ -1,5 +1,3 @@
-
-
 class TestProvider
 {
     std::string _keystore_path;
@@ -59,12 +57,12 @@ public:
 
     std::vector<std::string> getArgumentNames(const std::string& method, const std::string& model = "")
     {
-        return generateRandom(method, {{"length", 0}, {"adaptive", false}, {"duplicates", true}})->getMethodInfo().arg_names;
+        return generateRandom(method, {{"length", 0}, {"adaptive", false}, {"duplicates", true}})->getArgumentNames();
     }
 
     std::vector<std::string> getArgumentTypes(const std::string& method, const std::string& model = "")
     {
-        return generateRandom(method, {{"length", 0}, {"adaptive", false}, {"duplicates", true}})->getMethodInfo().arg_types;
+        return generateRandom(method, {{"length", 0}, {"adaptive", false}, {"duplicates", true}})->getArgumentTypes();
     }
 
     std::shared_ptr<TestQueue<std::string>> exportNwise(const std::string& method, std::map<std::string, std::any> options = {})
@@ -302,35 +300,32 @@ private:
 
         std::vector<std::string> types;
         std::shared_ptr<TestQueue<TestArguments>> result(new TestQueue<TestArguments>());
-        std::shared_ptr<MethodInfo> method_info(new MethodInfo);
-        std::shared_ptr<bool> method_info_ready(new bool(false));
 
-        std::function<size_t(void *data, size_t size, size_t nmemb)> data_cb = [this, result, method_info, method_info_ready](void *data, size_t size, size_t nmemb) -> size_t {
+        std::function<size_t(void *data, size_t size, size_t nmemb)> data_cb = [this, result](void *data, size_t size, size_t nmemb) -> size_t {
             if (nmemb > 0) {
                 std::string test((char*) data, (char*) data + nmemb - 1);
 
                 auto [name, value] = _parseTestLine(test);
-                if (name == "info" && value.to_str() != "alive" && *method_info_ready == false) {
+                if (name == "info" && value.to_str() != "alive" && !result->getMethodInfoReady()) {
                     std::string method_signature = value.to_str();
                     std::replace(method_signature.begin(), method_signature.end(), '\'', '\"');
 
                     auto [name_1, value_1] = _parseTestLine(method_signature);
                     if (name_1 == "method") {
-                        if (_parseMethodInfo(value_1.to_str(), method_info)) {
-                            *method_info_ready = true;
-                            result->setMethodInfo(*method_info);
+                        if (_parseMethodInfo(value_1.to_str(), result->getMethodInfo())) {
+                            result->setMethodInfoReady();
                         }
                     }
                 }
-                else if(name == "testCase" && *method_info_ready) {
-                    result->insert(_parseTestCase(value, method_info));
+                else if(name == "testCase" && result->getMethodInfoReady()) {
+                    result->insert(_parseTestCase(value, result->getMethodInfo()));
                 }
 
             }
             return nmemb;
         };
 
-        _running_requests.push_back(std::async(std::launch::async, [result, url, data_cb, this](){
+        _running_requests.push_back(std::async(std::launch::async, [result, url, data_cb, this]() {
             _performRequest(url, &data_cb);
             result->finish();
         }));
@@ -481,7 +476,7 @@ private:
         return url;
     }
 
-    bool _parseMethodInfo(const std::string& line, std::shared_ptr<MethodInfo> method_info) 
+    bool _parseMethodInfo(const std::string& line, MethodInfo& method_info) 
     {
         auto begin = line.find_first_of("(");
         auto end = line.find_last_of(")");
@@ -493,14 +488,14 @@ private:
             token = token.substr(token.find_first_not_of(" "));
             std::string arg_type = token.substr(0, token.find(" "));
             std::string arg_name = token.substr(token.find(" ") + 1);
-            method_info->arg_names.push_back(arg_name);
-            method_info->arg_types.push_back(arg_type);
+            method_info.arg_names.push_back(arg_name);
+            method_info.arg_types.push_back(arg_type);
         }
 
         return true;
     }
 
-    TestArguments _parseTestCase(picojson::value test, std::shared_ptr<MethodInfo> method_info) 
+    TestArguments _parseTestCase(picojson::value test, MethodInfo& method_info) 
     {
         TestArguments result;
 
@@ -511,7 +506,7 @@ private:
                 
                 try {                    
                     std::string value = element.get<picojson::object>()["value"].to_str();
-                    result.add(method_info->arg_names[arg_index], method_info->arg_types[arg_index], value);
+                    result.add(method_info.arg_names[arg_index], method_info.arg_types[arg_index], value);
                 } 
                 catch(const std::exception& e) {
                    std::cerr << "Exception caught: " << e.what() << ". Too many parameters in the test: " << test.to_str() << std::endl;
