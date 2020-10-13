@@ -1,7 +1,8 @@
-#include "main.cpp"
 #include "gtest/gtest.h"
+#include "ecfeed.h"
 #include <iostream>
-#include<queue>
+
+// clear && g++-8 -pthread -std=c++17 -o test src/testGoogle.cpp  -lcurl -lcrypto -lstdc++fs -lgtest_main -lgtest && ./test
 
 int n = 2;
 int coverage = 100;
@@ -42,11 +43,11 @@ class FixtureGenerate : public ::testing::TestWithParam<ecfeed::TestArguments> {
 //    std::cout << GetParam() << std::endl;
 // }
 
-INSTANTIATE_TEST_CASE_P(Generate, FixtureGenerate, ::testing::ValuesIn((testProvider.generateCartesian(method, optionsGenerateCartesian))->toList()));
-TEST_P(FixtureGenerate, Cartesian) {
-   std::cout << GetParam() << std::endl;
-   std::cout << GetParam().getString("arg1") << std::endl;
-}
+// INSTANTIATE_TEST_CASE_P(Generate, FixtureGenerate, ::testing::ValuesIn((testProvider.generateCartesian(method, optionsGenerateCartesian))->toList()));
+// TEST_P(FixtureGenerate, Cartesian) {
+//    std::cout << GetParam() << std::endl;
+//    std::cout << GetParam().getString("arg1") << std::endl;
+// }
 
 // INSTANTIATE_TEST_CASE_P(Generate, FixtureGenerate, ::testing::ValuesIn((testProvider.generateRandom(method, optionsGenerateRandom))->toList()));
 // TEST_P(FixtureGenerate, Random) {
@@ -80,7 +81,7 @@ class FixtureExport : public ::testing::TestWithParam<std::string> {};
 //    std::cout << GetParam() << std::endl;
 // }
 
-// INSTANTIATE_TEST_CASE_P(Generate, FixtureExport, ::testing::ValuesIn((testProvider.exportStatic(method, optionsExportStatic))->toList()));
-// TEST_P(FixtureExport, Static) {
-//    std::cout << GetParam() << std::endl;
-// }
+INSTANTIATE_TEST_CASE_P(Generate, FixtureExport, ::testing::ValuesIn((testProvider.exportStatic(method, optionsExportStatic))->toList()));
+TEST_P(FixtureExport, Static) {
+   std::cout << GetParam() << std::endl;
+}

@@ -1,30 +1,31 @@
-#include<curl/curl.h>
-#include"picojson.h"
-#include<iostream>
-#include<stdio.h>
-#include<string.h>
-#include<stdlib.h>
-#include<vector>
-#include<list>
-#include<map>
-#include<set>
-#include<queue>
-#include<unordered_map>
-#include<openssl/pem.h>
-#include<openssl/err.h>
-#include<openssl/pkcs12.h>
-#include<cstdio>
-#include<filesystem>
-#include<cstdlib>
-#include<ctime>
-#include<typeindex>
-#include<typeinfo>
-#include<functional>
-#include<regex>
-#include<sstream>
-#include<any>
-#include<future>
-#include<tuple>
+#pragma once
+#include "ext/picojson.h"
+#include <curl/curl.h>
+#include <iostream>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <vector>
+#include <list>
+#include <map>
+#include <set>
+#include <queue>
+#include <unordered_map>
+#include <openssl/pem.h>
+#include <openssl/err.h>
+#include <openssl/pkcs12.h>
+#include <cstdio>
+#include <filesystem>
+#include <cstdlib>
+#include <ctime>
+#include <typeindex>
+#include <typeinfo>
+#include <functional>
+#include <regex>
+#include <sstream>
+#include <any>
+#include <future>
+#include <tuple>
 #include <unistd.h>
 
 struct memory 
