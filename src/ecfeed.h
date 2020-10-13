@@ -1052,18 +1052,3 @@ namespace ecfeed
         }
     };
 }
-
-// int main(int argc, char** argv){
-
-//     ecfeed::TestProvider tp("V0G6-MHNQ-PDSR-G2WB-XOKV");
-
-//      for (auto test : tp.getArgumentTypes("QuickStart.test")) { 
-//         std::cout << test << std::endl;
-//      }
-
-//      for (auto test : tp.getArgumentNames("QuickStart.test")) { 
-//         std::cout << test << std::endl;
-//      }
-
-//     return 0;
-// }
