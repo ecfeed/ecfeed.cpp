@@ -2,6 +2,10 @@
 #include "ecfeed.h"
 #include <iostream>
 
+// https://stackoverflow.com/questions/13513905/how-to-set-up-googletest-as-a-shared-library-on-linux
+// sudo apt-get install libcurl4-gnutls-dev
+// sudo apt-get install libssl-dev
+
 // clear && g++-8 -pthread -std=c++17 -o test src/testGoogle.cpp  -lcurl -lcrypto -lstdc++fs -lgtest_main -lgtest && ./test
 
 int n = 2;
