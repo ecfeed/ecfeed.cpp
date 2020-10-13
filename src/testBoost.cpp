@@ -1,6 +1,7 @@
+#define BOOST_TEST_DYN_LINK
 #include <boost/test/included/unit_test.hpp>
 #include <boost/test/parameterized_test.hpp>
-using namespace boost::unit_test;
+#include "ecfeed.h"
 #include <iostream>
 #include <vector>
 
@@ -9,24 +10,21 @@ using namespace boost::unit_test;
 // https://www.boost.org/doc/libs/1_64_0/libs/test/doc/html/boost_test/tests_organization/test_cases/param_test.html
 // https://www.boost.org/users/download/
 
-// clear && g++ -o test src/testBoost.cpp -lboost_unit_test_framework -static -std=c++17 && ./test
+// clear && g++ -o test src/testBoost.cpp -lboost_unit_test_framework -std=c++17 -pthread -lcurl -lcrypto -lstdc++fs && ./test
 
-void present( int i )
+using namespace boost::unit_test;
+
+void present( ecfeed::TestArguments i )
 {
   std::cout << i << std::endl;
 }
 
-test_suite* init_unit_test_suite( int /*argc*/, char* /*argv*/[] )
+test_suite* init_unit_test_suite( int argc, char* argv[] )
 {
-    std::vector<int> parameters_list;
-    
-    parameters_list.push_back( 1 );
-	parameters_list.push_back( 5 );
-	parameters_list.push_back( 6 );
-	parameters_list.push_back( 7 );
-	parameters_list.push_back( 15 );
+    ecfeed::TestProvider testProvider("V0G6-MHNQ-PDSR-G2WB-XOKV");
+    std::vector<ecfeed::TestArguments> data = testProvider.generateNwise("General.testMethod")->toList();
 
-    framework::master_test_suite().add( BOOST_PARAM_TEST_CASE( &present, parameters_list.begin(), parameters_list.end() ) );
+    framework::master_test_suite().add( BOOST_PARAM_TEST_CASE( &present, data.begin(), data.end() ) );
 
   return 0;
 }
