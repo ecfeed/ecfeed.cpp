@@ -790,7 +790,7 @@ namespace ecfeed
 
             std::function<size_t(void *data, size_t size, size_t nmemb)> data_cb = [result](void *data, size_t size, size_t nmemb) -> size_t {
                 if (nmemb > 0) {
-                    std::string test((char*) data, (char*) data + nmemb - 1); //last byte seem to be a new line character
+                    std::string test((char*) data, (char*) data + nmemb - 1);
                     result->insert(test);
                 }
                 return nmemb;
