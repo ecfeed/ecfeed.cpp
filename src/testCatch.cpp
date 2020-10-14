@@ -1,9 +1,10 @@
 #define CATCH_CONFIG_MAIN
-#include "ext/catch.h"
+#include "catch2/catch.hpp"
 #include "ecfeed.h"
 #include <iostream>
 
-// clear && g++-8 -pthread -std=c++17 -o test src/testCatch.cpp  -lcurl -lcrypto -lstdc++fs  && ./test
+// conan install src/conanfile.txt -g compiler_args
+// clear && g++ src/testCatch.cpp @conanbuildinfo.args -o test -std=c++17 && ./test
 
 ecfeed::TestProvider testProvider("V0G6-MHNQ-PDSR-G2WB-XOKV");
 auto data = testProvider.generateNwise("General.testMethod")->toList();

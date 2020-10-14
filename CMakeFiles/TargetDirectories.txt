@@ -1,3 +1,0 @@
-/home/krzysztof/Desktop/git/ecfeed.cpp/CMakeFiles/rebuild_cache.dir
-/home/krzysztof/Desktop/git/ecfeed.cpp/CMakeFiles/runTests.dir
-/home/krzysztof/Desktop/git/ecfeed.cpp/CMakeFiles/edit_cache.dir

@@ -5,12 +5,8 @@
 #include <iostream>
 #include <vector>
 
-// https://www.boost.org/doc/libs/1_64_0/libs/test/doc/html/boost_test/adv_scenarios/build_utf.html
-// http://www.linuxfromscratch.org/blfs/view/svn/general/boost.html
-// https://www.boost.org/doc/libs/1_64_0/libs/test/doc/html/boost_test/tests_organization/test_cases/param_test.html
-// https://www.boost.org/users/download/
-
-// clear && g++ -o test src/testBoost.cpp -lboost_unit_test_framework -std=c++17 -pthread -lcurl -lcrypto -lstdc++fs && ./test
+// conan install src/conanfile.txt -g compiler_args
+// clear && g++ src/testCatch.cpp @conanbuildinfo.args -o test -std=c++17 && ./test
 
 using namespace boost::unit_test;
 

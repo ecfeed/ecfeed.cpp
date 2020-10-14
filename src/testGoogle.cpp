@@ -2,12 +2,8 @@
 #include "ecfeed.h"
 #include <iostream>
 
-
-// https://stackoverflow.com/questions/13513905/how-to-set-up-googletest-as-a-shared-library-on-linux
-// sudo apt-get install libcurl4-gnutls-dev
-// sudo apt-get install libssl-dev
-
-// clear && g++-8 -pthread -std=c++17 -o test src/testGoogle.cpp  -lcurl -lcrypto -lstdc++fs -lgtest_main -lgtest && ./test
+// conan install src/conanfile.txt -g compiler_args
+// clear && g++ src/testGoogle.cpp @conanbuildinfo.args -o test -std=c++17 && ./test
 
 int n = 2;
 int coverage = 100;
@@ -38,10 +34,10 @@ std::string method = "General.testMethod";
 
 class FixtureGenerate : public ::testing::TestWithParam<ecfeed::TestArguments> {};
 
-// INSTANTIATE_TEST_CASE_P(Generate, FixtureGenerate, ::testing::ValuesIn((testProvider.generateNwise(method, optionsGenerateNWise))->toList()));
-// TEST_P(FixtureGenerate, NWise) {
-//    std::cout << GetParam() << std::endl;
-// }
+INSTANTIATE_TEST_CASE_P(Generate, FixtureGenerate, ::testing::ValuesIn((testProvider.generateNwise(method, optionsGenerateNWise))->toList()));
+TEST_P(FixtureGenerate, NWise) {
+   std::cout << GetParam() << std::endl;
+}
 
 // INSTANTIATE_TEST_CASE_P(Generate, FixtureGenerate, ::testing::ValuesIn((testProvider.generatePairwise(method, optionsGeneratePairwise))->toList()));
 // TEST_P(FixtureGenerate, Pairwise) {
@@ -54,10 +50,10 @@ class FixtureGenerate : public ::testing::TestWithParam<ecfeed::TestArguments> {
 //    std::cout << GetParam().getString("arg1") << std::endl;
 // }
 
-INSTANTIATE_TEST_CASE_P(Generate, FixtureGenerate, ::testing::ValuesIn((testProvider.generateRandom(method, optionsGenerateRandom))->toList()));
-TEST_P(FixtureGenerate, Random) {
-   std::cout << GetParam() << std::endl;
-}
+// INSTANTIATE_TEST_CASE_P(Generate, FixtureGenerate, ::testing::ValuesIn((testProvider.generateRandom(method, optionsGenerateRandom))->toList()));
+// TEST_P(FixtureGenerate, Random) {
+//    std::cout << GetParam() << std::endl;
+// }
 
 // INSTANTIATE_TEST_CASE_P(Generate, FixtureGenerate, ::testing::ValuesIn((testProvider.generateStatic(method, optionsGenerateStatic))->toList()));
 // TEST_P(FixtureGenerate, Static) {
