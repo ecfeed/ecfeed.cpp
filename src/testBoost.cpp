@@ -1,7 +1,7 @@
 #define BOOST_TEST_DYN_LINK
 #include <boost/test/included/unit_test.hpp>
 #include <boost/test/parameterized_test.hpp>
-#include "ecfeed.h"
+#include "ecfeed.hpp"
 #include <iostream>
 #include <vector>
 

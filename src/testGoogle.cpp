@@ -1,5 +1,5 @@
 #include "gtest/gtest.h"
-#include "ecfeed.h"
+#include "ecfeed.hpp"
 #include <iostream>
 
 // conan install src/conanfile.txt -g compiler_args
