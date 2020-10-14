@@ -28,6 +28,14 @@
 #include <tuple>
 #include <unistd.h>
 
+#define DEBUG
+
+#ifdef DEBUG 
+#define VERBOSE(x) (x)
+#else 
+#define VERBOSE(x) do { } while(0)
+#endif
+
 struct memory 
 {
     char *response;
@@ -676,7 +684,7 @@ namespace ecfeed
             }
         }
 
-        std::map<std::string, std::any> setupNwise(std::map<std::string, std::any> options) 
+        std::map<std::string, std::any> setupNwise(std::map<std::string, std::any>& options) 
         {
             std::map<std::string, std::any> properties;
 
@@ -686,7 +694,7 @@ namespace ecfeed
             return properties;
         }
 
-        std::map<std::string, std::any> setupPairwise(std::map<std::string, std::any> options) 
+        std::map<std::string, std::any> setupPairwise(std::map<std::string, std::any>& options) 
         {
             std::map<std::string, std::any> properties;
 
@@ -695,7 +703,7 @@ namespace ecfeed
             return properties;
         }
         
-        std::map<std::string, std::any> setupRandom(std::map<std::string, std::any> options) 
+        std::map<std::string, std::any> setupRandom(std::map<std::string, std::any>& options) 
         {
             std::map<std::string, std::any> properties;
 
@@ -706,21 +714,22 @@ namespace ecfeed
             return properties;
         }
 
-        std::map<std::string, std::any> setupCartesian(std::map<std::string, std::any> options) 
+        std::map<std::string, std::any> setupCartesian(std::map<std::string, std::any>& options) 
         {
             std::map<std::string, std::any> properties;
 
             return properties;
         }
 
-        std::map<std::string, std::any> setupStatic(std::map<std::string, std::any> options) 
+        std::map<std::string, std::any> setupStatic(std::map<std::string, std::any>& options) 
         {
             std::map<std::string, std::any> properties;
 
             return properties;
         }
 
-        std::map<std::string, std::any> setup(std::map<std::string, std::any> options, std::map<std::string, std::any> properties, DataSource source, bool tmp) {
+        std::map<std::string, std::any> setup(std::map<std::string, std::any> options, std::map<std::string, std::any> properties, DataSource source, bool tmp) 
+        {
             std::map<std::string, std::any> opt;
 
             if (options.count("constraints")) {
@@ -880,8 +889,9 @@ namespace ecfeed
             }
 
             if (ca && sk_X509_num(ca)) {
-                for (unsigned i = 0; i < sk_X509_num(ca); i++)
+                for (unsigned i = 0; i < sk_X509_num(ca); i++) {
                     PEM_write_X509(ca_file, sk_X509_value(ca, i));
+                }
                 fclose(ca_file);
             }
 
@@ -944,14 +954,14 @@ namespace ecfeed
                 url += ",\"template\":\"" + template_type_url_param(std::any_cast<TemplateType>(opt["template"])) + "\"";
                 opt.erase("template");
             }
-            else if(requestType == "requestExport") {
+            else if (requestType == "requestExport") {
                 url += ",\"template\":\"CSV\"";
             }
 
             if (opt.size() != 0) {
                 url += ",\"userData\":\"{";
                 std::string padding = "";
-                for(const std::pair<std::string, std::any>& option : opt){
+                for (const std::pair<std::string, std::any>& option : opt) {
                     url += padding + options::serialize(option);
                     padding = ",";
                 }
@@ -972,7 +982,7 @@ namespace ecfeed
                 std::cerr << e.what() << std::endl;
             }
 
-            std::cout << "url:" << url << std::endl;
+            VERBOSE(std::cout << "url:" << url << std::endl);
 
             return url;
         }

@@ -2,6 +2,7 @@
 #include "ecfeed.h"
 #include <iostream>
 
+
 // https://stackoverflow.com/questions/13513905/how-to-set-up-googletest-as-a-shared-library-on-linux
 // sudo apt-get install libcurl4-gnutls-dev
 // sudo apt-get install libssl-dev
@@ -53,10 +54,10 @@ class FixtureGenerate : public ::testing::TestWithParam<ecfeed::TestArguments> {
 //    std::cout << GetParam().getString("arg1") << std::endl;
 // }
 
-// INSTANTIATE_TEST_CASE_P(Generate, FixtureGenerate, ::testing::ValuesIn((testProvider.generateRandom(method, optionsGenerateRandom))->toList()));
-// TEST_P(FixtureGenerate, Random) {
-//    std::cout << GetParam() << std::endl;
-// }
+INSTANTIATE_TEST_CASE_P(Generate, FixtureGenerate, ::testing::ValuesIn((testProvider.generateRandom(method, optionsGenerateRandom))->toList()));
+TEST_P(FixtureGenerate, Random) {
+   std::cout << GetParam() << std::endl;
+}
 
 // INSTANTIATE_TEST_CASE_P(Generate, FixtureGenerate, ::testing::ValuesIn((testProvider.generateStatic(method, optionsGenerateStatic))->toList()));
 // TEST_P(FixtureGenerate, Static) {
@@ -85,7 +86,7 @@ class FixtureExport : public ::testing::TestWithParam<std::string> {};
 //    std::cout << GetParam() << std::endl;
 // }
 
-INSTANTIATE_TEST_CASE_P(Generate, FixtureExport, ::testing::ValuesIn((testProvider.exportStatic(method, optionsExportStatic))->toList()));
-TEST_P(FixtureExport, Static) {
-   std::cout << GetParam() << std::endl;
-}
+// INSTANTIATE_TEST_CASE_P(Generate, FixtureExport, ::testing::ValuesIn((testProvider.exportStatic(method, optionsExportStatic))->toList()));
+// TEST_P(FixtureExport, Static) {
+//    std::cout << GetParam() << std::endl;
+// }
