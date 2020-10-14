@@ -15,9 +15,9 @@ int length = 50;    // The generation should be stopped before reaching the limi
 bool duplicates = true;
 bool adaptive = true;
 ecfeed::TemplateType template_type = ecfeed::TemplateType::JSON;
-std::set<std::string> constraints = {"constraint1"};    // Missing std::string options.
-std::set<std::string> test_suites = {"suite1"};    // Missing std::string options.
-std::map<std::string, std::set<std::string>> choices = {{"arg0", {"choice1", "choice2"}}, {"arg1", {"choice1", "choice2"}}};   // Missing std::string options.
+std::set<std::string> constraints = {"constraint1"};
+std::set<std::string> test_suites = {"suite1"};
+std::map<std::string, std::set<std::string>> choices = {{"arg0", {"choice1", "choice2"}}, {"arg1", {"choice1", "choice2"}}};
 
 std::map<std::string, std::any> optionsGenerateNWise = {{"coverage", coverage}, {"n", n}, {"constraints", constraints}, {"choices", choices}};
 std::map<std::string, std::any> optionsGeneratePairwise = {{"coverage", coverage}, {"constraints", constraints}, {"choices", choices}};
