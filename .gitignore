@@ -4,3 +4,9 @@ build/*
 ecfeed.creator.user
 ecfeed
 
+conan.lock
+conanbuildinfo.args
+conanbuildinfo.txt
+conaninfo.txt
+graph_info.json
+test
