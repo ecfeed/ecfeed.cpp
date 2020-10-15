@@ -10,13 +10,11 @@
 
 using namespace boost::unit_test;
 
-void present( ecfeed::TestArguments i )
-{
+void present( ecfeed::TestArguments i ) {
   std::cout << i << std::endl;
 }
 
-test_suite* init_unit_test_suite( int argc, char* argv[] )
-{
+test_suite* init_unit_test_suite( int argc, char* argv[] ) {
     ecfeed::TestProvider testProvider("V0G6-MHNQ-PDSR-G2WB-XOKV");
     std::vector<ecfeed::TestArguments> data = testProvider.generateNwise("General.testMethod")->toList();
 

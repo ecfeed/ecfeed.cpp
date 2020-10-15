@@ -9,8 +9,7 @@
 ecfeed::TestProvider testProvider("V0G6-MHNQ-PDSR-G2WB-XOKV");
 auto data = testProvider.generateNwise("General.testMethod")->toList();
 
-TEST_CASE("EcFeed test", "[NWise generate]")
-{
+TEST_CASE("EcFeed test", "[NWise generate]") {
     for (int i = 0 ; i < data.size() ; i++) {
         SECTION("test [" + std::to_string(i) + "]") {
             std::cout << data[i] << std::endl;
