@@ -10,13 +10,13 @@
 
 using namespace boost::unit_test;
 
-void present( ecfeed::TestArguments i ) {
+void present( ecfeed::test_arguments i ) {
   std::cout << i << std::endl;
 }
 
 test_suite* init_unit_test_suite( int argc, char* argv[] ) {
-    ecfeed::TestProvider testProvider("V0G6-MHNQ-PDSR-G2WB-XOKV");
-    std::vector<ecfeed::TestArguments> data = testProvider.generateNwise("General.testMethod")->toList();
+    ecfeed::test_provider testProvider("V0G6-MHNQ-PDSR-G2WB-XOKV");
+    std::vector<ecfeed::test_arguments> data = testProvider.generate_nwise("General.testMethod")->to_list();
 
     framework::master_test_suite().add( BOOST_PARAM_TEST_CASE( &present, data.begin(), data.end() ) );
 

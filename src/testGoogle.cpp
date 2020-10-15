@@ -29,60 +29,60 @@ std::map<std::string, std::any> optionsExportStatic = {{"template", template_typ
 
 // -----------------------------------------------------------------------------------------------------------------------------
 
-ecfeed::TestProvider testProvider("V0G6-MHNQ-PDSR-G2WB-XOKV");
+ecfeed::test_provider testProvider("V0G6-MHNQ-PDSR-G2WB-XOKV");
 std::string method = "General.testMethod";
 
-class FixtureGenerate : public ::testing::TestWithParam<ecfeed::TestArguments> {};
+class FixtureGenerate : public ::testing::TestWithParam<ecfeed::test_arguments> {};
 
-INSTANTIATE_TEST_CASE_P(Generate, FixtureGenerate, ::testing::ValuesIn((testProvider.generateNwise(method, optionsGenerateNWise))->toList()));
+INSTANTIATE_TEST_CASE_P(Generate, FixtureGenerate, ::testing::ValuesIn((testProvider.generate_nwise(method, optionsGenerateNWise))->to_list()));
 TEST_P(FixtureGenerate, NWise) {
    std::cout << GetParam() << std::endl;
 }
 
-// INSTANTIATE_TEST_CASE_P(Generate, FixtureGenerate, ::testing::ValuesIn((testProvider.generatePairwise(method, optionsGeneratePairwise))->toList()));
+// INSTANTIATE_TEST_CASE_P(Generate, FixtureGenerate, ::testing::ValuesIn((testProvider.generate_pairwise(method, optionsGeneratePairwise))->to_list()));
 // TEST_P(FixtureGenerate, Pairwise) {
 //    std::cout << GetParam() << std::endl;
 // }
 
-// INSTANTIATE_TEST_CASE_P(Generate, FixtureGenerate, ::testing::ValuesIn((testProvider.generateCartesian(method, optionsGenerateCartesian))->toList()));
+// INSTANTIATE_TEST_CASE_P(Generate, FixtureGenerate, ::testing::ValuesIn((testProvider.generate_cartesian(method, optionsGenerateCartesian))->to_list()));
 // TEST_P(FixtureGenerate, Cartesian) {
 //    std::cout << GetParam() << std::endl;
-//    std::cout << GetParam().getString("arg1") << std::endl;
+//    std::cout << GetParam().get_string("arg1") << std::endl;
 // }
 
-// INSTANTIATE_TEST_CASE_P(Generate, FixtureGenerate, ::testing::ValuesIn((testProvider.generateRandom(method, optionsGenerateRandom))->toList()));
+// INSTANTIATE_TEST_CASE_P(Generate, FixtureGenerate, ::testing::ValuesIn((testProvider.generate_random(method, optionsGenerateRandom))->to_list()));
 // TEST_P(FixtureGenerate, Random) {
 //    std::cout << GetParam() << std::endl;
 // }
 
-// INSTANTIATE_TEST_CASE_P(Generate, FixtureGenerate, ::testing::ValuesIn((testProvider.generateStatic(method, optionsGenerateStatic))->toList()));
+// INSTANTIATE_TEST_CASE_P(Generate, FixtureGenerate, ::testing::ValuesIn((testProvider.generate_static(method, optionsGenerateStatic))->to_list()));
 // TEST_P(FixtureGenerate, Static) {
 //    std::cout << GetParam() << std::endl;
 // }
 
 class FixtureExport : public ::testing::TestWithParam<std::string> {};
 
-// INSTANTIATE_TEST_CASE_P(Generate, FixtureExport, ::testing::ValuesIn((testProvider.exportNwise(method, optionsExportNWise))->toList()));
+// INSTANTIATE_TEST_CASE_P(Generate, FixtureExport, ::testing::ValuesIn((testProvider.export_nwise(method, optionsExportNWise))->to_list()));
 // TEST_P(FixtureExport, NWise) {
 //    std::cout << GetParam() << std::endl;
 // }
 
-// INSTANTIATE_TEST_CASE_P(Generate, FixtureExport, ::testing::ValuesIn((testProvider.exportPairwise(method, optionsExportPairwise))->toList()));
+// INSTANTIATE_TEST_CASE_P(Generate, FixtureExport, ::testing::ValuesIn((testProvider.export_pairwise(method, optionsExportPairwise))->to_list()));
 // TEST_P(FixtureExport, Pairwise) {
 //    std::cout << GetParam() << std::endl;
 // }
 
-// INSTANTIATE_TEST_CASE_P(Generate, FixtureExport, ::testing::ValuesIn((testProvider.exportCartesian(method, optionsExportCartesian))->toList()));
+// INSTANTIATE_TEST_CASE_P(Generate, FixtureExport, ::testing::ValuesIn((testProvider.export_cartesian(method, optionsExportCartesian))->to_list()));
 // TEST_P(FixtureExport, Cartesian) {
 //    std::cout << GetParam() << std::endl;
 // }
 
-// INSTANTIATE_TEST_CASE_P(Generate, FixtureExport, ::testing::ValuesIn((testProvider.exportRandom(method, optionsExportRandom))->toList()));
+// INSTANTIATE_TEST_CASE_P(Generate, FixtureExport, ::testing::ValuesIn((testProvider.export_random(method, optionsExportRandom))->to_list()));
 // TEST_P(FixtureExport, Random) {
 //    std::cout << GetParam() << std::endl;
 // }
 
-// INSTANTIATE_TEST_CASE_P(Generate, FixtureExport, ::testing::ValuesIn((testProvider.exportStatic(method, optionsExportStatic))->toList()));
+// INSTANTIATE_TEST_CASE_P(Generate, FixtureExport, ::testing::ValuesIn((testProvider.export_static(method, optionsExportStatic))->to_list()));
 // TEST_P(FixtureExport, Static) {
 //    std::cout << GetParam() << std::endl;
 // }
