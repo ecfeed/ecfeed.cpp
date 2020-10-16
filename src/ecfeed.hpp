@@ -1,3 +1,20 @@
+
+/*
+* The following file contains of two separate parts.
+*
+* picojson (a third party library)
+*   The original source code has not been altered.
+*   Copyright: 2009-2010 Cybozu Labs, Inc., 2011-2014 Kazuho Oku
+*   License: BSD-2
+*   Repository: https://github.com/kazuho/picojson
+* ecfeed
+*   Copyright: 2020 EcFeec AS.
+*   License: EPL-1.0
+*   Repository: https://github.com/ecfeed/ecfeed.cpp
+*/
+
+// -------------------------------------------------------------------------------------------------------------
+
 /*
  * Copyright 2009-2010 Cybozu Labs, Inc.
  * Copyright 2011-2014 Kazuho Oku
@@ -1173,6 +1190,8 @@ inline std::ostream &operator<<(std::ostream &os, const picojson::value &x) {
 #endif
 
 #endif
+
+// -------------------------------------------------------------------------------------------------------------
 
 /********************************************************************************
  * Copyright (c) 15.10.2020 ecFeed AS
