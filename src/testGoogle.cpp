@@ -10,7 +10,7 @@ int coverage = 100;
 int length = 50;    // The generation should be stopped before reaching the limit.
 bool duplicates = true;
 bool adaptive = true;
-ecfeed::template_type template_type = ecfeed::template_type::json;
+ecfeed::template_type template_type = ecfeed::template_type::raw;
 std::set<std::string> constraints = {"constraint1"};
 std::set<std::string> test_suites = {"suite1"};
 std::map<std::string, std::set<std::string>> choices = {{"arg0", {"choice1", "choice2"}}, {"arg1", {"choice1", "choice2"}}};
@@ -34,10 +34,10 @@ std::string method = "General.testMethod";
 
 class FixtureGenerate : public ::testing::TestWithParam<ecfeed::test_arguments> {};
 
-INSTANTIATE_TEST_CASE_P(Generate, FixtureGenerate, ::testing::ValuesIn((testProvider.generate_nwise(method, optionsGenerateNWise))->to_list()));
-TEST_P(FixtureGenerate, NWise) {
-   std::cout << GetParam() << std::endl;
-}
+// INSTANTIATE_TEST_CASE_P(Generate, FixtureGenerate, ::testing::ValuesIn((testProvider.generate_nwise(method, optionsGenerateNWise))->to_list()));
+// TEST_P(FixtureGenerate, NWise) {
+//    std::cout << GetParam() << std::endl;
+// }
 
 // INSTANTIATE_TEST_CASE_P(Generate, FixtureGenerate, ::testing::ValuesIn((testProvider.generate_pairwise(method, optionsGeneratePairwise))->to_list()));
 // TEST_P(FixtureGenerate, Pairwise) {
@@ -62,10 +62,10 @@ TEST_P(FixtureGenerate, NWise) {
 
 class FixtureExport : public ::testing::TestWithParam<std::string> {};
 
-// INSTANTIATE_TEST_CASE_P(Generate, FixtureExport, ::testing::ValuesIn((testProvider.export_nwise(method, optionsExportNWise))->to_list()));
-// TEST_P(FixtureExport, NWise) {
-//    std::cout << GetParam() << std::endl;
-// }
+INSTANTIATE_TEST_CASE_P(Generate, FixtureExport, ::testing::ValuesIn((testProvider.export_nwise(method, optionsExportNWise))->to_list()));
+TEST_P(FixtureExport, NWise) {
+   std::cout << GetParam() << std::endl;
+}
 
 // INSTANTIATE_TEST_CASE_P(Generate, FixtureExport, ::testing::ValuesIn((testProvider.export_pairwise(method, optionsExportPairwise))->to_list()));
 // TEST_P(FixtureExport, Pairwise) {

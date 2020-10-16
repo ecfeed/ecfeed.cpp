@@ -1220,13 +1220,16 @@ inline std::ostream &operator<<(std::ostream &os, const picojson::value &x) {
 #include <future>
 #include <unistd.h>
 
-#ifdef DEBUG 
-#define VERBOSE(x) (x)
-#else 
-#define VERBOSE(x) do { } while(0)
-#endif
+#define DEBUG
 
 namespace ecfeed {
+
+    #ifdef DEBUG 
+    #define VERBOSE(x) (x)
+    #else 
+    #define VERBOSE(x) do { } while(0)
+    #endif
+
     static bool _curl_initialized = false;
 
     static size_t curl_data_callback(void *data, size_t size, size_t nmemb, void *userp) {
@@ -1255,7 +1258,7 @@ namespace ecfeed {
         case template_type::json:
             return "JSON";
         case template_type::raw:
-            return "Stream";
+            return "RAW";
         }
 
         return "UNKNOWN";
@@ -2203,7 +2206,6 @@ namespace ecfeed {
 
             if (! test.is<picojson::array>()) {
                 std::cerr << "Error: test case should be a JSON array" << std::endl;
-                return result;
             }
 
             return result;
