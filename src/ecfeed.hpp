@@ -1230,14 +1230,6 @@ namespace ecfeed {
     #define VERBOSE(x) do { } while(0)
     #endif
 
-    static bool _curl_initialized = false;
-
-    static size_t curl_data_callback(void *data, size_t size, size_t nmemb, void *userp) {
-        auto callback = static_cast<std::function<size_t(void *data, size_t size, size_t nmemb)>*>(userp);
-
-        return callback->operator()(data, size, nmemb);
-    }
-
     enum class template_type {
         csv = 1,
         xml = 2,
@@ -1741,10 +1733,7 @@ namespace ecfeed {
             OpenSSL_add_all_algorithms();
             ERR_load_CRYPTO_strings();
 
-            if (_curl_initialized == false) {
-                curl_global_init(CURL_GLOBAL_ALL);
-                _curl_initialized = true;
-            }
+            curl_global_init(CURL_GLOBAL_ALL);
 
             _curl_handle = curl_easy_init();
 
@@ -1853,6 +1842,12 @@ namespace ecfeed {
         
     private:
 
+        static size_t _curl_data_callback(void *data, size_t size, size_t nmemb, void *userp) {
+            auto callback = static_cast<std::function<size_t(void *data, size_t size, size_t nmemb)>*>(userp);
+
+            return callback->operator()(data, size, nmemb);
+        }
+
         std::string _get_key_store(std::string keystore_path = "") {
 
             if (keystore_path == "") {
@@ -1946,7 +1941,7 @@ namespace ecfeed {
             curl_easy_setopt(_curl_handle, CURLOPT_CAINFO, _ca_path.string().c_str());
             curl_easy_setopt(_curl_handle, CURLOPT_BUFFERSIZE, 8);
 
-            curl_easy_setopt(_curl_handle, CURLOPT_WRITEFUNCTION, curl_data_callback);
+            curl_easy_setopt(_curl_handle, CURLOPT_WRITEFUNCTION, _curl_data_callback);
             curl_easy_setopt(_curl_handle, CURLOPT_WRITEDATA, (void *)data_callback);
 
             curl_easy_setopt(_curl_handle, CURLOPT_ERRORBUFFER, error_buf);
