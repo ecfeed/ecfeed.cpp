@@ -3,7 +3,7 @@
 #include <iostream>
 
 // conan install src/conanfile.txt -g compiler_args
-// clear && g++ src/testGoogle.cpp @conanbuildinfo.args -o test -std=c++17 && ./test
+// clear && g++ src/testGoogle.cpp @conanbuildinfo.args -o output -std=c++17 && ./output
 
 int n = 2;
 int coverage = 100;

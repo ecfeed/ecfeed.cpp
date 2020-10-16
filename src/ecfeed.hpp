@@ -1207,34 +1207,18 @@ inline std::ostream &operator<<(std::ostream &os, const picojson::value &x) {
 #define ECFEED_HPP
 
 #include <curl/curl.h>
-#include <iostream>
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <vector>
-#include <list>
-#include <map>
-#include <set>
-#include <queue>
-#include <unordered_map>
 #include <openssl/pem.h>
 #include <openssl/err.h>
 #include <openssl/pkcs12.h>
-#include <cstdio>
+#include <iostream>
+#include <list>
+#include <set>
 #include <filesystem>
-#include <cstdlib>
-#include <ctime>
 #include <typeindex>
-#include <typeinfo>
-#include <functional>
 #include <regex>
-#include <sstream>
 #include <any>
 #include <future>
-#include <tuple>
 #include <unistd.h>
-
-#define DEBUG
 
 #ifdef DEBUG 
 #define VERBOSE(x) (x)
