@@ -1408,30 +1408,50 @@ namespace ecfeed {
 
     };
 
-    class test_arguments {
-        std::vector<std::tuple<std::string, std::string, std::string>> core;
+    struct argument {
+        std::string name;
+        std::string type;
+        std::string value;
+    };
 
-        friend std::ostream& operator<<(std::ostream& os, const test_arguments& test_arguments);
+    class test_arguments {
+        std::vector<argument> core;
 
     public:
 
         void add(std::string name, std::string type, std::string value) {
 
-            core.push_back(std::make_tuple(name, type, value));
+            argument element;
+
+            element.name = name;
+            element.type = type;
+            element.value = value;
+
+            core.push_back(element);
+        }
+
+        std::vector<argument> get_vector() const {
+
+            return core;
+        }
+
+        int get_size() const {
+
+            return core.size();
         }
 
         template<typename T>
         T get(int index) const  {
-            std::tuple<std::string, std::string, std::string> argument = core.at(index);
+            argument element = core.at(index);
 
-            return _parse<T>(std::get<1>(argument), std::get<2>(argument));
+            return _parse<T>(element.type, element.value);
         }
 
         template<typename T>
         T get(std::string name) const {
 
             for (int i = 0 ; i < core.size() ; i++) {
-                if (std::get<0>(core.at(i)) == name) {
+                if (core.at(i).name == name) {
                     return get<T>(i);
                 }
             }
@@ -1576,8 +1596,6 @@ namespace ecfeed {
         bool _method_info_ready;
 
     public:
-
-        typedef T value_type;
 
         test_queue() : _done(false), _begin(*this), _end(*this, true), _method_info_ready(false) {
         }
@@ -2232,10 +2250,19 @@ namespace ecfeed {
         }
     };
 
+    inline std::ostream& operator<<(std::ostream& os, const argument& argument) {
+
+        os << argument.type << " " << argument.name << " = " << argument.value << "; ";
+
+        return os;
+    }
+
     inline std::ostream& operator<<(std::ostream& os, const test_arguments& test_arguments) {
         
-        for (auto &x : test_arguments.core) {
-            os << std::get<1>(x) << " " << std::get<0>(x) << " = " << std::get<2>(x) << "; ";
+        os << "size: " << test_arguments.get_size() << " | ";
+
+        for (auto &x : test_arguments.get_vector()) {
+            os << x;
         }
 
         return os;
