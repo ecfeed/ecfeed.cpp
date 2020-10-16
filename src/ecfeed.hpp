@@ -1226,6 +1226,12 @@ inline std::ostream &operator<<(std::ostream &os, const picojson::value &x) {
 namespace ecfeed {
     static bool _curl_initialized = false;
 
+    static size_t curl_data_callback(void *data, size_t size, size_t nmemb, void *userp) {
+        auto callback = static_cast<std::function<size_t(void *data, size_t size, size_t nmemb)>*>(userp);
+
+        return callback->operator()(data, size, nmemb);
+    }
+
     enum class template_type {
         csv = 1,
         xml = 2,
@@ -1275,104 +1281,116 @@ namespace ecfeed {
         return "UNKNOWN";
     }
 
-    class options {
-        std::string serialize(const std::any&);
-        std::string serialize(const std::pair<std::string, std::any>&v);
-        static std::unordered_map<std::type_index, std::function<std::string(const std::any&)>> _serializers;
+    struct method_info {
+        std::vector<std::string> arg_names;
+        std::vector<std::string> arg_types;
+    };
 
-  public:
+    class serializer {
+        std::unordered_map<std::type_index, std::function<std::string(const std::any&)>> _serializers;
 
-        options() {
+    public:
 
-           init_serializers();
+        serializer() {
+
+           _init_serializers();
         }
 
-        template<typename T> 
-        std::function<std::string(const std::any&)> single_value_serializer = [](const std::any& v) {
+        std::string serialize(const std::pair<std::string, std::any>&v) {
 
-            return "'" + std::to_string(std::any_cast<T>(v)) + "'";
-        };
+            return "'" + v.first + "':" + _serialize(v.second);
+        }
 
-        template<typename COMPOSITE_TYPE>
-        std::function<std::string(const std::any&)> composite_value_serializer = [](const std::any& v) {
-            std::string result = "[";
-            std::string padding = "";
+    private:
 
-            for (auto& e : std::any_cast<COMPOSITE_TYPE>(v)) {
-                result += padding + serialize(e);
-                padding = ",";
-            }
+        void _init_serializers() {
 
-            return result + "]";
-        };
+            _serializers[std::type_index(typeid(unsigned))] = [&](const std::any& v) {
 
-        template<typename VALUE_TYPE>
-        std::function<std::string(const std::any&)> map_serializer = [](const std::any& v) {
-            std::string result = "{";
-            std::string padding = "";
-            auto casted = std::any_cast<std::map<std::string, VALUE_TYPE>>(v);
+                return "'" + std::to_string(std::any_cast<unsigned>(v)) + "'";
+            };
 
-            for (auto& e : casted) {
-                result += padding + "'" + e.first + "':" + serialize(e.second);
-                padding = ",";
-            }
+            _serializers[std::type_index(typeid(int))] = [&](const std::any& v) {
 
-            return result + "}";
-        };
+                return "'" + std::to_string(std::any_cast<int>(v)) + "'";
+            };
 
-
-        void init_serializers() {
-
-            _serializers[std::type_index(typeid(unsigned))] = single_value_serializer<unsigned>;
-
-            _serializers[std::type_index(typeid(int))] = single_value_serializer<int>;
-
-            _serializers[std::type_index(typeid(bool))] = [](const std::any& v) {
+            _serializers[std::type_index(typeid(bool))] = [&](const std::any& v) {
 
                 return std::string("'") + (std::any_cast<bool>(v) ? "true" : "false") + "'";
             };
 
-            _serializers[std::type_index(typeid(std::string))] = [](const std::any& v) {
+            _serializers[std::type_index(typeid(std::string))] = [&](const std::any& v) {
 
                 return "'" + std::any_cast<std::string>(v) + "'";
             };
 
-            _serializers[std::type_index(typeid(data_source))] = [](const std::any& v) {
+            _serializers[std::type_index(typeid(data_source))] = [&](const std::any& v) {
 
                 return "'" + data_source_url_param(std::any_cast<data_source>(v)) + "'";
             };
 
-            _serializers[std::type_index(typeid(template_type))] = [](const std::any& v) {
+            _serializers[std::type_index(typeid(template_type))] = [&](const std::any& v) {
 
                 return "'" + template_type_url_param(std::any_cast<template_type>(v)) + "'";
+            };     
+
+            _serializers[std::type_index(typeid(std::set<std::string>))] = [&](const std::any& v) {
+                std::string result = "[";
+                std::string padding = "";
+
+                for (auto& e : std::any_cast<std::set<std::string>>(v)) {
+                    result += padding + _serialize(e);
+                    padding = ",";
+                }
+
+                return result + "]";
             };
 
-            _serializers[std::type_index(typeid(std::set<std::string>))] = composite_value_serializer<std::set<std::string>>;
+            _serializers[std::type_index(typeid(std::list<std::string>))] = [&](const std::any& v) {
+                std::string result = "[";
+                std::string padding = "";
 
-            _serializers[std::type_index(typeid(std::list<std::string>))] = composite_value_serializer<std::list<std::string>>;
+                for (auto& e : std::any_cast<std::list<std::string>>(v)) {
+                    result += padding + _serialize(e);
+                    padding = ",";
+                }
 
-            _serializers[std::type_index(typeid(std::vector<std::string>))] = composite_value_serializer<std::vector<std::string>>;
+                return result + "]";
+            };
 
-            _serializers[std::type_index(typeid(std::map<std::string, std::set<std::string>>))] = [](const std::any& v) {
+            _serializers[std::type_index(typeid(std::vector<std::string>))] = [&](const std::any& v) {
+                std::string result = "[";
+                std::string padding = "";
+
+                for (auto& e : std::any_cast<std::vector<std::string>>(v)) {
+                    result += padding + _serialize(e);
+                    padding = ",";
+                }
+
+                return result + "]";
+            };
+
+            _serializers[std::type_index(typeid(std::map<std::string, std::set<std::string>>))] = [&](const std::any& v) {
                 std::string result = "{";
                 std::string padding = "";
                 auto casted = std::any_cast<std::map<std::string, std::set<std::string>>>(v);
 
                 for (auto& e : casted) {
-                    result += padding + "'" + e.first + "':" + serialize(e.second);
+                    result += padding + "'" + e.first + "':" + _serialize(e.second);
                     padding = ",";
                 }
 
                 return result + "}";
             };
 
-            _serializers[std::type_index(typeid(std::map<std::string, std::any>))] = [](const std::any& v) {
+            _serializers[std::type_index(typeid(std::map<std::string, std::any>))] = [&](const std::any& v) {
                 std::string result = "{";
                 std::string padding = "";
                 auto casted = std::any_cast<std::map<std::string, std::any>>(v);
 
                 for (auto& e : casted) {
-                    result += padding + "'" + e.first + "':" + serialize(e.second);
+                    result += padding + "'" + e.first + "':" + _serialize(e.second);
                     padding = ",";
                 }
 
@@ -1380,7 +1398,7 @@ namespace ecfeed {
             };
         }
 
-        std::string serialize(const std::any& v) {
+        std::string _serialize(const std::any& v) {
 
             if (auto serializer = _serializers.find(v.type()); serializer != _serializers.end()) {
                 return serializer->second(v);
@@ -1390,22 +1408,6 @@ namespace ecfeed {
             }
         };
 
-        std::string serialize(const std::pair<std::string, std::any>&v) {
-
-            return "'" + v.first + "':" + serialize(v.second);
-        }
-
-    }
-
-    static size_t curl_data_callback(void *data, size_t size, size_t nmemb, void *userp) {
-        auto callback = static_cast<std::function<size_t(void *data, size_t size, size_t nmemb)>*>(userp);
-
-        return callback->operator()(data, size, nmemb);
-    }
-
-    struct method_info {
-        std::vector<std::string> arg_names;
-        std::vector<std::string> arg_types;
     };
 
     class test_arguments {
@@ -1519,15 +1521,6 @@ namespace ecfeed {
             }
         }
     };
-
-    inline std::ostream& operator<<(std::ostream& os, const test_arguments& test_arguments) {
-        
-        for (auto &x : test_arguments.core) {
-            os << std::get<1>(x) << " " << std::get<0>(x) << " = " << std::get<2>(x) << "; ";
-        }
-
-        return os;
-    }
 
     template<typename T>
     class test_queue {
@@ -1719,7 +1712,7 @@ namespace ecfeed {
 
         std::mutex _mutex;
 
-        options _options;
+        serializer _serializer;
 
     public:
 
@@ -2141,7 +2134,7 @@ namespace ecfeed {
                 std::string padding = "";
 
                 for (const std::pair<std::string, std::any>& option : opt) {
-                    url += padding + options.serialize(option);
+                    url += padding + _serializer.serialize(option);
                     padding = ",";
                 }
 
@@ -2238,6 +2231,15 @@ namespace ecfeed {
             return std::tie("", nothing);
         }
     };
+
+    inline std::ostream& operator<<(std::ostream& os, const test_arguments& test_arguments) {
+        
+        for (auto &x : test_arguments.core) {
+            os << std::get<1>(x) << " " << std::get<0>(x) << " = " << std::get<2>(x) << "; ";
+        }
+
+        return os;
+    }
 }
 
 #endif
