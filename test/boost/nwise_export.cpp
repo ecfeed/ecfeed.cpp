@@ -4,5 +4,5 @@
 std::vector<std::string> nwise_export(std::string model, std::string method) {
     ecfeed::test_provider testProvider(model);
 
-    return testProvider.export_cartesian(method)->to_list();
+    return testProvider.export_nwise(method)->to_list();
 }

@@ -13,7 +13,11 @@
 
 using namespace boost::unit_test;
 
-void present( ecfeed::test_arguments i ) {
+void presentExport( std::string i ) {
+  std::cout << i << std::endl;
+}
+
+void presentGenerate( ecfeed::test_arguments i ) {
   std::cout << i << std::endl;
 }
 
@@ -22,9 +26,10 @@ test_suite* init_unit_test_suite( int argc, char* argv[] ) {
     std::string method = "General.testMethod";
 
     std::vector<std::string> data_export = nwise_export(model, method);
-    // auto data_generate = nwise_generate(model, method);
+    auto data_generate = nwise_generate(model, method);
 
-    // framework::master_test_suite().add( BOOST_PARAM_TEST_CASE( &present, data_export.begin(), data_export.end() ) );
-
-  return 0;
+    framework::master_test_suite().add( BOOST_PARAM_TEST_CASE( &presentExport, data_export.begin(), data_export.end() ) );
+    framework::master_test_suite().add( BOOST_PARAM_TEST_CASE( &presentGenerate, data_generate.begin(), data_generate.end() ) );
+    
+    return 0;
 }
