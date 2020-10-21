@@ -1,5 +1,5 @@
 #define BOOST_TEST_DYN_LINK
-#include "../../src/ecfeed.hpp"
+#include "ecfeed.hpp"
 #include <boost/test/included/unit_test.hpp>
 #include <boost/test/parameterized_test.hpp>
 #include "nwise_generate.h"
@@ -9,7 +9,6 @@
 
 // conan install conanfile.txt -g compiler_args
 // clear && g++ main.cpp nwise_generate.cpp nwise_export.cpp @conanbuildinfo.args -o output -std=c++17 && ./output
-// -lstdc++fs
 
 using namespace boost::unit_test;
 

@@ -1,4 +1,4 @@
-#include "../../src/ecfeed.hpp"
+#include "ecfeed.hpp"
 #include "nwise_generate.h"
 #include "nwise_export.h"
 #include <iostream>
