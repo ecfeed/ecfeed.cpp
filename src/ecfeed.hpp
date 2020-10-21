@@ -1219,6 +1219,7 @@ inline std::ostream &operator<<(std::ostream &os, const picojson::value &x) {
 #include <any>
 #include <future>
 #include <unistd.h>
+#include <unordered_map>
 
 #define DEBUG
 
