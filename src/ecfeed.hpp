@@ -1,6 +1,6 @@
 
 /*
-* The following file contains of two separate parts.
+* The following file consists of two separate parts.
 *
 * picojson (a third party library)
 *   The original source code has not been altered.
@@ -8,7 +8,7 @@
 *   License: BSD-2
 *   Repository: https://github.com/kazuho/picojson
 * ecfeed
-*   Copyright: 2020 EcFeec AS.
+*   Copyright: 2020 EcFeed AS.
 *   License: EPL-1.0
 *   Repository: https://github.com/ecfeed/ecfeed.cpp
 */

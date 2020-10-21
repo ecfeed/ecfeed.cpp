@@ -1,6 +1,6 @@
 #include "gtest/gtest.h"
 
-// conan install src/conanfile.txt -g compiler_args
+// conan install conanfile.txt -g compiler_args
 // clear && g++ main.cpp test_generate.cpp test_export.cpp  @conanbuildinfo.args -o output -std=c++17 && ./output
 
 // Main is optional.

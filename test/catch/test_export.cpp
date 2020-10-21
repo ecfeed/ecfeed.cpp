@@ -1,5 +1,5 @@
 #include "catch2/catch.hpp"
-#include "../../src/ecfeed.hpp"
+#include "ecfeed.hpp"
 #include <iostream>
 
 namespace test_export {

@@ -1,5 +1,5 @@
 #include "gtest/gtest.h"
-#include "../../src/ecfeed.hpp"
+#include "ecfeed.hpp"
 #include <iostream>
 
 namespace test_generate {
