@@ -7,9 +7,6 @@
 #include <iostream>
 #include <vector>
 
-// conan install conanfile.txt -g compiler_args
-// clear && g++ main.cpp nwise_generate.cpp nwise_export.cpp @conanbuildinfo.args -o output -std=c++17 && ./output
-
 using namespace boost::unit_test;
 
 void presentExport( std::string i ) {
