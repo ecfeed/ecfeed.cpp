@@ -1221,8 +1221,6 @@ inline std::ostream &operator<<(std::ostream &os, const picojson::value &x) {
 #include <unistd.h>
 #include <unordered_map>
 
-#define DEBUG
-
 namespace ecfeed {
 
     #ifdef DEBUG 
@@ -1230,6 +1228,10 @@ namespace ecfeed {
     #else 
     #define VERBOSE(x) do { } while(0)
     #endif
+
+    inline void test() {
+      std::cout << "Hello ecFeed" << std::endl;
+    }
 
     enum class template_type {
         csv = 1,
