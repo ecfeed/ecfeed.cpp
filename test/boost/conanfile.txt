@@ -1,8 +1,0 @@
-[requires]
-    libcurl/7.72.0
-    openssl/1.1.1c
-    ecfeed/0.1
-    boost/1.74.0
-[generators]
-    cmake
-[options]

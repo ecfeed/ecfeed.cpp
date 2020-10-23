@@ -4,12 +4,13 @@ build/*
 ecfeed.creator.user
 ecfeed
 
+test/*
+
 **/conan.lock
 **/conanbuildinfo.args
 **/conanbuildinfo.txt
 **/conaninfo.txt
 **/graph_info.json
-
 
 **output
 
