@@ -1229,7 +1229,7 @@ namespace ecfeed {
     #define VERBOSE(x) do { } while(0)
     #endif
 
-    inline std::string test() {
+    inline void test() {
       std::cout << "Hello ecFeed" << std::endl;
     }
 
