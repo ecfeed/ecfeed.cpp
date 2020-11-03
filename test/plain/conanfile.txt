@@ -1,7 +1,5 @@
 [requires]
-    libcurl/7.72.0
-    openssl/1.1.1c
-    ecfeed/1.0
+    ecfeed/1.0.0
 [generators]
     cmake
 [options]
