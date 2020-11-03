@@ -2,5 +2,6 @@
 #include <iostream>
 
 int main() {
-    ecfeed::test();
+    ecfeed::template_type type = ecfeed::template_type::csv;
+    std::cout << ecfeed::template_type_url_param(type) << std::endl;
 }
