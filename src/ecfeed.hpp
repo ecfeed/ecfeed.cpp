@@ -1767,12 +1767,12 @@ namespace ecfeed {
             curl_easy_cleanup(_curl_handle);
         }
 
-        std::vector<std::string> get_argument_names(const std::string& method, const std::string& model = "") {
+        std::vector<std::string> get_argument_names(const std::string& method) {
 
             return generate_random(method, {{"length", 0}, {"adaptive", false}, {"duplicates", true}})->get_argument_names();
         }
 
-        std::vector<std::string> get_argument_types(const std::string& method, const std::string& model = "") {
+        std::vector<std::string> get_argument_types(const std::string& method) {
 
             return generate_random(method, {{"length", 0}, {"adaptive", false}, {"duplicates", true}})->get_argument_types();
         }
