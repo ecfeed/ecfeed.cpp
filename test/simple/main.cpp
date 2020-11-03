@@ -1,4 +1,4 @@
-#include "ecfeed.hpp"
+#include "../../src/ecfeed.hpp"
 #include <iostream>
 
 int main() {

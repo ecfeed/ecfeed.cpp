@@ -1706,6 +1706,38 @@ private:
 
 };
 
+class params {
+public:
+    std::set<std::string> constraints;
+    std::map<std::string, std::set<std::string>> choices;
+
+    params& set_constraints(const std::set<std::string> constraints_) {
+        constraints = constraints_;
+        return *this;
+    }
+
+    params& set_choices(const std::map<std::string, std::set<std::string>> choices_) {
+        choices = choices_;
+        return *this;
+    }
+};
+
+class params_nwise : public params {
+public:
+    unsigned int n;
+    unsigned int coverage;
+
+    params_nwise& set_n(const unsigned int n_) {
+      n = n_;
+      return *this;
+    }
+
+    params_nwise& set_converage(const unsigned int coverage_) {
+      coverage = coverage_;
+      return *this;
+    }
+};
+
 class test_provider {
     std::string _keystore_path;
     const std::string _genserver;

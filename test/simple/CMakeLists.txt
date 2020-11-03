@@ -8,6 +8,5 @@ conan_basic_setup(TARGETS)
 
 add_executable(ecfeed main.cpp)
 
-target_link_libraries(ecfeed CONAN_PKG::ecfeed CONAN_PKG::ecfeed)
 target_link_libraries(ecfeed CONAN_PKG::libcurl CONAN_PKG::libcurl)
 target_link_libraries(ecfeed CONAN_PKG::openssl CONAN_PKG::openssl)
