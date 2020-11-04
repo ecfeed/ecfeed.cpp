@@ -1,6 +1,6 @@
 [requires]
     gtest/1.8.1
-    ecfeed/1.0.0
+    ecfeed/1.0
 [generators]
     cmake
 [options]
