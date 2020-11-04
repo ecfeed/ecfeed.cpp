@@ -1706,6 +1706,125 @@ private:
 
 };
 
+class params {
+
+    ecfeed::template_type _template_type;
+    std::any _constraints;
+    std::any _choices;
+    std::any _test_suites;
+
+    unsigned int _n;
+    unsigned int _coverage;
+
+    unsigned int _length;
+    bool _duplicates;
+    bool _adaptive;
+
+public:
+
+    params() :  _template_type(ecfeed::template_type::csv), 
+                _constraints(std::string("ALL")), _choices(std::string("ALL")), _test_suites(std::string("ALL")),
+                _n(2), _coverage(100),
+                _length(100), _duplicates(false), _adaptive(true)
+    {}
+
+    ecfeed::template_type& get_template_type()  {
+        return _template_type;
+    }
+
+    std::any& get_constraints()  {
+        return _constraints;
+    }
+
+    std::any& get_choices()  {
+        return _choices;
+    }
+
+    std::any& get_test_suites()  {
+        return _test_suites;
+    }
+
+    unsigned int get_n() {
+        return _n;
+    }
+
+    unsigned int get_coverage() {
+        return _coverage;
+    }
+
+    unsigned int get_length() {
+      return _length;
+    }
+
+    bool get_duplicates() {
+      return _duplicates;
+    }
+
+    bool get_adaptive() {
+      return _adaptive;
+    }
+
+    params& template_type(ecfeed::template_type template_type) {
+        _template_type = template_type;
+        return *this;
+    }
+
+    params& constraints(std::set<std::string> constraints) {
+        _constraints = constraints;
+        return *this;
+    }
+
+    params& constraints(std::string constraints) {
+        _constraints = constraints;
+        return *this;
+    }
+
+    params& test_suites(std::set<std::string> test_suites) {
+        _test_suites = test_suites;
+        return *this;
+    }
+
+    params& test_suites(std::string test_suites) {
+        _test_suites = test_suites;
+        return *this;
+    }
+
+    params& choices(std::map<std::string, std::set<std::string>> choices) {
+        _choices = choices;
+        return *this;
+    }
+
+    params& choices(std::string choices) {
+        _choices = choices;
+        return *this;
+    }
+
+    params& n(unsigned int n) {
+        _n = n;
+        return *this;
+    }
+
+    params& coverage(unsigned int coverage) {
+        _coverage = coverage;
+        return *this;
+    }
+
+    params& length(unsigned int length) {
+        _length = length;
+        return *this;
+    }
+
+    params& duplicates(bool duplicates) {
+        _duplicates = duplicates;
+        return *this;
+    }
+
+    params& adaptive(bool adaptive) {
+        _adaptive = adaptive;
+        return *this;
+    }
+};
+
 class test_provider {
     std::string _keystore_path;
     const std::string _genserver;
@@ -1761,15 +1880,15 @@ public:
 
     std::vector<std::string> get_argument_names(const std::string& method, const std::string& model = "") {
 
-        return generate_random(method, {{"length", 0}, {"adaptive", false}, {"duplicates", true}})->get_argument_names();
+        return generate_random(method, params().length(0).adaptive(false).duplicates(true))->get_argument_names();
     }
 
     std::vector<std::string> get_argument_types(const std::string& method, const std::string& model = "") {
 
-        return generate_random(method, {{"length", 0}, {"adaptive", false}, {"duplicates", true}})->get_argument_types();
+        return generate_random(method, params().length(0).adaptive(false).duplicates(true))->get_argument_types();
     }
 
-    std::shared_ptr<test_queue<std::string>> export_nwise(const std::string& method, std::map<std::string, std::any> options = {}) {
+    std::shared_ptr<test_queue<std::string>> export_nwise(const std::string& method, ecfeed::params options = ecfeed::params()) {
         std::lock_guard<std::mutex> lock(_mutex);
 
         std::map<std::string, std::any> opt = _setup(options, _setup_nwise(options), data_source::nwise, true);
@@ -1777,7 +1896,7 @@ public:
         return _export(method, opt);
     }
 
-    std::shared_ptr<test_queue<test_arguments>> generate_nwise(const std::string& method, std::map<std::string, std::any> options = {}) {
+    std::shared_ptr<test_queue<test_arguments>> generate_nwise(const std::string& method, ecfeed::params options = ecfeed::params()) {
         std::lock_guard<std::mutex> lock(_mutex);
 
         std::map<std::string, std::any> opt = _setup(options, _setup_nwise(options), data_source::nwise, false);
@@ -1785,7 +1904,7 @@ public:
         return _generate(method, opt);
     }
 
-    std::shared_ptr<test_queue<std::string>> export_pairwise(const std::string& method, std::map<std::string, std::any> options = {}) {
+    std::shared_ptr<test_queue<std::string>> export_pairwise(const std::string& method, ecfeed::params options = ecfeed::params()) {
         std::lock_guard<std::mutex> lock(_mutex);
 
         std::map<std::string, std::any> opt = _setup(options, _setup_pairwise(options), data_source::nwise, true);
@@ -1793,7 +1912,7 @@ public:
         return _export(method, opt);
     }
 
-    std::shared_ptr<test_queue<test_arguments>> generate_pairwise(const std::string& method, std::map<std::string, std::any> options = {}) {
+    std::shared_ptr<test_queue<test_arguments>> generate_pairwise(const std::string& method, ecfeed::params options = ecfeed::params()) {
         std::lock_guard<std::mutex> lock(_mutex);
 
         std::map<std::string, std::any> opt = _setup(options, _setup_pairwise(options), data_source::nwise, false);
@@ -1801,7 +1920,7 @@ public:
         return _generate(method, opt);
     }
 
-    std::shared_ptr<test_queue<std::string>> export_random(const std::string& method, std::map<std::string, std::any> options = {}) {
+    std::shared_ptr<test_queue<std::string>> export_random(const std::string& method, ecfeed::params options = ecfeed::params()) {
         std::lock_guard<std::mutex> lock(_mutex);
 
         std::map<std::string, std::any> opt = _setup(options, _setup_random(options), data_source::random, true);
@@ -1809,7 +1928,7 @@ public:
         return _export(method, opt);
     }
 
-    std::shared_ptr<test_queue<test_arguments>> generate_random(const std::string& method, std::map<std::string, std::any> options = {}) {
+    std::shared_ptr<test_queue<test_arguments>> generate_random(const std::string& method, ecfeed::params options = ecfeed::params()) {
         std::lock_guard<std::mutex> lock(_mutex);
 
         std::map<std::string, std::any> opt = _setup(options, _setup_random(options), data_source::random, false);
@@ -1817,7 +1936,7 @@ public:
         return _generate(method, opt);
     }
 
-    std::shared_ptr<test_queue<std::string>> export_cartesian(const std::string& method, std::map<std::string, std::any> options = {}) {
+    std::shared_ptr<test_queue<std::string>> export_cartesian(const std::string& method, ecfeed::params options = ecfeed::params()) {
         std::lock_guard<std::mutex> lock(_mutex);
 
         std::map<std::string, std::any> opt = _setup(options, _setup_cartesian(options), data_source::cartesian, true);
@@ -1825,7 +1944,7 @@ public:
         return _export(method, opt);
     }
 
-    std::shared_ptr<test_queue<test_arguments>> generate_cartesian(const std::string& method, std::map<std::string, std::any> options = {}) {
+    std::shared_ptr<test_queue<test_arguments>> generate_cartesian(const std::string& method, ecfeed::params options = ecfeed::params()) {
         std::lock_guard<std::mutex> lock(_mutex);
 
         std::map<std::string, std::any> opt = _setup(options, _setup_cartesian(options), data_source::cartesian, false);
@@ -1833,20 +1952,20 @@ public:
         return _generate(method, opt);
     }
 
-    std::shared_ptr<test_queue<std::string>> export_static(const std::string& method, std::map<std::string, std::any> options = {}) {
+    std::shared_ptr<test_queue<std::string>> export_static(const std::string& method, ecfeed::params options = ecfeed::params()) {
         std::lock_guard<std::mutex> lock(_mutex);
 
         std::map<std::string, std::any> opt = _setup(options, _setup_static(options), data_source::static_data, true);
-        opt["testSuites"] = options["testSuites"];
+        opt["testSuites"] =  options.get_test_suites();
 
         return _export(method, opt);
     }
 
-    std::shared_ptr<test_queue<test_arguments>> generate_static(const std::string& method, std::map<std::string, std::any> options = {}) {
+    std::shared_ptr<test_queue<test_arguments>> generate_static(const std::string& method, ecfeed::params options = ecfeed::params()) {
         std::lock_guard<std::mutex> lock(_mutex);
 
         std::map<std::string, std::any> opt = _setup(options, _setup_static(options), data_source::static_data, false);
-        opt["testSuites"] = options["testSuites"];
+        opt["testSuites"] =  options.get_test_suites();
 
         return _generate(method, opt);
     }
@@ -1875,70 +1994,69 @@ private:
         }
     }
 
-    std::map<std::string, std::any> _setup_nwise(std::map<std::string, std::any>& options) {
+    std::map<std::string, std::any> _setup_nwise(ecfeed::params& options) {
         std::map<std::string, std::any> properties;
 
-        properties["n"] = options.count("n") ? options["n"] : 2; options.erase("n");
-        properties["coverage"] = options.count("coverage") ? options["coverage"] : 100; options.erase("coverage");
+        properties["n"] = options.get_n();
+        properties["coverage"] = options.get_coverage();
 
         return properties;
     }
 
-    std::map<std::string, std::any> _setup_pairwise(std::map<std::string, std::any>& options) {
+    std::map<std::string, std::any> _setup_pairwise(ecfeed::params& options) {
         std::map<std::string, std::any> properties;
 
-        properties["coverage"] = options.count("coverage") ? options["coverage"] : 100; options.erase("coverage");
+        properties["coverage"] = options.get_coverage();
 
         return properties;
     }
         
-    std::map<std::string, std::any> _setup_random(std::map<std::string, std::any>& options) {
+    std::map<std::string, std::any> _setup_random(ecfeed::params& options) {
         std::map<std::string, std::any> properties;
 
-        properties["length"] = options.count("length") ? options["length"] : 100; options.erase("length");
-        properties["duplicates"] = options.count("duplicates") ? options["duplicates"] : std::set<std::string>({}); options.erase("duplicates");
-        properties["adaptive"] = options.count("adaptive") ? options["adaptive"] : std::map<std::string, std::set<std::string>>({}); options.erase("adaptive");
+        properties["length"] = options.get_length();
+        properties["duplicates"] = options.get_duplicates();
+        properties["adaptive"] = options.get_adaptive();
 
         return properties;
     }
 
-    std::map<std::string, std::any> _setup_cartesian(std::map<std::string, std::any>& options) {
-        std::map<std::string, std::any> properties;
-
-        return properties;
-    }
-
-    std::map<std::string, std::any> _setup_static(std::map<std::string, std::any>& options) {
+    std::map<std::string, std::any> _setup_cartesian(ecfeed::params& options) {
         std::map<std::string, std::any> properties;
 
         return properties;
     }
 
-    std::map<std::string, std::any> _setup(std::map<std::string, std::any> options, std::map<std::string, std::any> properties, data_source source, bool tmp) {
+    std::map<std::string, std::any> _setup_static(ecfeed::params& options) {
+        std::map<std::string, std::any> properties;
+
+        return properties;
+    }
+
+    std::map<std::string, std::any> _setup(params& options, std::map<std::string, std::any> properties, data_source source, bool format) {
         std::map<std::string, std::any> opt;
 
-        if (options.count("constraints")) {
-            opt["constraints"] =  options["constraints"];
-            options.erase("constraints");
+        if (options.get_constraints().type() == typeid(std::string)) {
+            if (std::any_cast<std::string>(options.get_constraints()) != "ALL") {
+                opt["constraints"] =  options.get_constraints();
+            }
+        } else {
+            opt["constraints"] =  options.get_constraints();
         }
-            
-        if (options.count("choices")) {
-            opt["choices"] =  options["choices"];
-            options.erase("choices");
+
+        if (options.get_choices().type() == typeid(std::string)) {
+            if (std::any_cast<std::string>(options.get_choices()) != "ALL") {
+                opt["choices"] =  options.get_choices();
+            }
+        } else {
+            opt["choices"] =  options.get_choices();
         }
 
         opt["dataSource"] = source;
         opt["properties"] = properties;
 
-        if (tmp) {
-            opt["template"] = options.count("template") ? options["template"] : template_type::csv;  options.erase("template");
-        }
-
-        if (options.size()) {
-            std::cerr << "Unknown options: ";
-            for (const auto& option : options) {
-                std::cerr << " " << option.first << " " ;
-            }
+        if (format) {
+            opt["template"] = options.get_template_type();
         }
 
         return opt;
