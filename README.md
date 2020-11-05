@@ -1,3 +1,8 @@
+---
+title: 'EcFeed integration with C++'
+path: 'tutorials/cpp-integration'
+---
+
 # Integration with C++
 
 ## Contents
@@ -6,7 +11,7 @@
 	<a class="plain" href="#introduction">Introduction</a></br>
 	<a class="plain" href="#examples">Examples</a></br>
 	<a class="plain" href="#google">Google Test</a></br>
-    <a class="plain" href="#catch2">Catch2</a></br>
+    <a class="plain" href="#catch2">Catch2 Test</a></br>
     <a class="plain" href="#boost">Boost Test</a></br>
 </div>
 
@@ -44,13 +49,13 @@ int main() {
 }
 ```
 
-Note, that the C++ runner requires additional libraries: 'libcurl' and 'openssl'. They can be installed on the system or downloaded from a remote package manager, for example [Conan Center](https://conan.io/center/). A sample 'conanfile.txt' can look as follows:
+Note, that the C++ runner requires additional libraries: 'libcurl' and 'openssl'. They can be installed on the system or downloaded from a remote package manager, for example [Conan Center](https://conan.io/center/). A sample 'conanfile.txt' might look as follows:
 
 ```
 [requires]
     libcurl/7.72.0
     openssl/1.1.1c
-    ecfeed/1.0
+    ecfeed/1.0.0
 [generators]
     cmake
 [options]
@@ -100,7 +105,7 @@ TEST_P(FixtureGenerate, NWise_Generate) {
 }
 ```
 
-### <a name="catch2">Catch2</a>
+### <a name="catch2">Catch2 Test</a>
 
 Another common testing framework, which can be used with the C++ runner, is Catch2:
 
@@ -187,10 +192,10 @@ ecfeed::test_provider testProvider("IMHL-K0DU-2U0I-J532-25J9", "home/user/securi
 
 ### <a name="generatorcalls">Generator calls</a>
 
-'test\_provider' can invoke five methods to access the ecFeed generator service. They produce data parsed to 'std::shared\_ptr<test\_queue<test\_arguments>>'. Additional parameters can be included in the configuration map.
+'test\_provider' can invoke five methods to access the ecFeed generator service. They produce data parsed to 'std::shared\_ptr<test\_queue<test\_arguments>>'. Additional parameters can be included in the configuration class.
 <br/><br/>
 
-<div class="tableHeader">std::shared_ptr&lt;test_queue&lt;test_arguments&gt;&gt; generate_nwise(const std::string& method, std::map&lt;std::string, std::any&gt; options = {})</div>
+<div class="tableHeader">std::shared_ptr&lt;test_queue&lt;test_arguments&gt;&gt; generate_nwise(const std::string& method, params_nwise options = params_nwise())</div>
 
 Generate test cases using the NWise algorithm.  
 
@@ -208,27 +213,27 @@ int main() {
     std::set<std::string> constraints = {"constraint1"};
     std::map<std::string, std::set<std::string>> choices = {{"arg1", {"choice1", "choice2"}}, {"arg2", {"choice1", "choice2"}}};
 
-    std::map<std::string, std::any> optionsGenerateNWise = {{"n", n}, {"coverage", coverage}, {"constraints", constraints}, {"choices", choices}};
+    ecfeed::params_nwise args = ecfeed::params_nwise().n(n).coverage(coverage).constraints(constraints).choices(choices);
 
     std::string model = "IMHL-K0DU-2U0I-J532-25J9";
     std::string method = "QuickStart.test";
 
     ecfeed::test_provider testProvider(model);
 
-    for (auto& test : *testProvider.generate_nwise(method, optionsGenerateNWise)) {
+    for (auto& test : *testProvider.generate_nwise(method, args)) {
         std::cout << test << std::endl;
     }
 }
 ```
 <br/><br/>
 
-<div class="tableHeader">std::shared_ptr&lt;test_queue&lt;test_arguments&gt;&gt; generate_pairwise(const std::string& method, std::map&lt;std::string, std::any&gt; options = {})</div>
+<div class="tableHeader">std::shared_ptr&lt;test_queue&lt;test_arguments&gt;&gt; generate_pairwise(const std::string& method, params_pairwise options = params_pairwise())</div>
 
 Calls nwise with n=2. For people that like being explicit. Uses the same arguments as 'generate\_nwise' excluding 'n'.
 
 <br/><br/>
 
-<div class="tableHeader">std::shared_ptr&lt;test_queue&lt;test_arguments&gt;&gt; generate_cartesian(const std::string& method, std::map&lt;std::string, std::any&gt; options = {})</div>
+<div class="tableHeader">std::shared_ptr&lt;test_queue&lt;test_arguments&gt;&gt; generate_cartesian(const std::string& method, params_cartesian options = params_cartesian())</div>
 
 Generate test cases using the Cartesian product.  
 
@@ -238,7 +243,7 @@ Arguments:
 - *constraints* - See 'generate\_nwise'.
 <br/><br/>
 
-<div class="tableHeader">std::shared_ptr&lt;test_queue&lt;test_arguments&gt;&gt; generate_random(const std::string& method, std::map&lt;std::string, std::any&gt; options = {})</div>
+<div class="tableHeader">std::shared_ptr&lt;test_queue&lt;test_arguments&gt;&gt; generate_random(const std::string& method, params_random options = params_random())</div>
 
 Generate randomized test cases.  
 
@@ -250,7 +255,7 @@ Arguments:
 - *choices* - See 'generate\_nwise'.
 - *constraints* - See 'generate\_nwise'.
 <br/><br/>
-std::shared_ptr&lt;test_queue&lt;test_arguments&gt;&gt; generate_static(const std::string& method, std::map&lt;std::string, std::any&gt; options = {})</div>
+std::shared_ptr&lt;test_queue&lt;test_arguments&gt;&gt; generate_static(const std::string& method, params_static options = params_static())</div>
 
 Download generated test cases (do not use the generator).  
 
@@ -261,14 +266,14 @@ Arguments:
 ### <a name="exportcalls">Export calls</a>
 
 
-Those methods look similarly to 'generate' methods. However, they return 'std::shared_ptr<test_queue<std::string>>', do not parse the data, and generate the output using templates. For this reason, they require one more argument which should be added to the 'options' map, namely 'template' (if it is non-existent, the JSON format is used). The predefined values are: 'ecfeed::template_type::json', 'ecfeed::template_type::xml', 'ecfeed::template_type::gherkin', 'ecfeed::template_type::csv', 'ecfeed::template_type::raw'. 
+Those methods look similarly to 'generate' methods. However, they return 'std::shared_ptr<test_queue<std::string>>', do not parse the data, and generate the output using templates. For this reason, they require one more argument which should be added to the configuration class, namely 'template' (if it is non-existent, the CSV format is used by default). The predefined values are: 'ecfeed::template_type::json', 'ecfeed::template_type::xml', 'ecfeed::template_type::gherkin', 'ecfeed::template_type::csv', 'ecfeed::template_type::raw'. 
 
 ```cpp
-std::shared_ptr<test_queue<std::string>> export_nwise(const std::string& method, std::map<std::string, std::any> options = {})
-std::shared_ptr<test_queue<std::string>> export_pairwise(const std::string& method, std::map<std::string, std::any> options = {})
-std::shared_ptr<test_queue<std::string>> export_cartesian(const std::string& method, std::map<std::string, std::any> options = {})
-std::shared_ptr<test_queue<std::string>> export_random(const std::string& method, std::map<std::string, std::any> options = {})
-std::shared_ptr<test_queue<std::string>> export_random(const std::string& method, std::map<std::string, std::any> options = {})
+std::shared_ptr<test_queue<std::string>> export_nwise(const std::string& method, params_nwise options = params_nwise())
+std::shared_ptr<test_queue<std::string>> export_pairwise(const std::string& method, params_pairwise options = params_pairwise())
+std::shared_ptr<test_queue<std::string>> export_cartesian(const std::string& method, params_cartesian options = params_cartesian())
+std::shared_ptr<test_queue<std::string>> export_random(const std::string& method, params_random options = params_random())
+std::shared_ptr<test_queue<std::string>> export_static(const std::string& method, params_static options = params_static())
 ```
 
 ### <a name="othermethods">Other methods</a>
