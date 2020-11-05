@@ -1,6 +1,6 @@
 [requires]
     boost/1.74.0
-    ecfeed/1.0
+    ecfeed/1.0.0
 [generators]
     cmake
 [options]
