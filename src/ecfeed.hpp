@@ -1,4 +1,3 @@
-
 /*
  * The following file consists of two separate parts.
  *
@@ -1923,7 +1922,6 @@ class test_provider {
     std::list<std::future<void>> _running_requests;
 
     std::mutex _mutex;
-
     serializer _serializer;
 
 public:
