@@ -1271,6 +1271,41 @@ static std::string data_source_url_param(const data_source& s) {
     return "UNKNOWN";
 }
 
+struct session_data {
+  std::string model;
+  std::string method_name;
+  ecfeed::template_type template_type;
+  ecfeed::data_source data_source;
+  std::any constraints;
+  std::any choices;
+  std::any test_suites;
+  std::string label;
+  std::map<std::string, std::string> custom;
+  int n;
+  int coverage;
+  int length;
+  bool duplicates;
+  bool adaptive;
+};
+
+struct session_data_feedback {
+  int test_cases_total;
+  int test_cases_parsed;
+  bool transmission_finished;
+};
+
+struct session_data_internal {
+  std::string framework;
+  std::string method_name_qualified;
+  std::string test_session_id;
+  long timestamp;
+  std::any test_results;
+};
+
+struct session_data_connection {
+  std::string generator_address;
+};
+
 struct method_info {
     std::vector<std::string> arg_names;
     std::vector<std::string> arg_types;
@@ -1843,7 +1878,7 @@ class params_random : public params_common_setter<params_random> {
 
 public:
 
-    params_random() : _length(10), _duplicates(false), _adaptive(false)
+    params_random() : _length(10), _duplicates(true), _adaptive(false)
     {}
 
     unsigned int get_length() {
