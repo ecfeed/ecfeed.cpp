@@ -1271,6 +1271,27 @@ static std::string data_source_url_param(const data_source& s) {
     return "UNKNOWN";
 }
 
+struct session_data_feedback {
+  int test_cases_total = 0;
+  int test_cases_parsed = 0;
+  bool transmission_finished = false;
+};
+
+struct session_data_internal {
+  std::string framework = "C++";
+  std::string method_name_qualified = "";
+  std::string test_session_id = "";
+  std::string timestamp = "";
+  std::any test_results;
+  std::vector<std::string> arg_names;
+  std::vector<std::string> arg_types;
+  bool method_info_ready = false;
+};
+
+struct session_data_connection {
+  std::string generator_address = "";
+};
+
 struct session_data {
   std::string model;
   std::string method_name;
@@ -1281,35 +1302,63 @@ struct session_data {
   std::any test_suites;
   std::string label;
   std::map<std::string, std::string> custom;
-  int n;
-  int coverage;
-  int length;
-  bool duplicates;
-  bool adaptive;
+  int n = -1;
+  int coverage = -1;
+  int length = -1;
+  bool duplicates = false;
+  bool adaptive = true;
+
+  ecfeed::session_data_feedback feedback;
+  ecfeed::session_data_internal internal;
+  ecfeed::session_data_connection connection;
+
+  friend std::ostream& operator<<(std::ostream& os, const session_data& data);
 };
 
-struct session_data_feedback {
-  int test_cases_total;
-  int test_cases_parsed;
-  bool transmission_finished;
-};
+std::ostream& operator<<(std::ostream& os, const session_data& data)
+{
+    os << "model: " << data.model << std::endl;
+    os << "method_name: " << data.method_name << std::endl;
+    os << "template_type: " << template_type_url_param(data.template_type) << std::endl;
+    os << "data_source: " << data_source_url_param(data.data_source) << std::endl;
+    os << "label: " << data.label << std::endl;
+    os << "custom: "; for(auto elem : data.custom) { os << elem.first << " " << elem.second << std::endl; }; os << std::endl;
+    
+    os << "constraints: "; os << data.constraints.type().name();
+    if (data.constraints.type() == typeid(std::string)) {
+     if (std::any_cast<std::string>(data.constraints) != "ALL") {
+        os << "stringi";
+     }
+    } else {
+        os << "nie stringi";
+    } 
+    os << std::endl;
 
-struct session_data_internal {
-  std::string framework;
-  std::string method_name_qualified;
-  std::string test_session_id;
-  long timestamp;
-  std::any test_results;
-};
 
-struct session_data_connection {
-  std::string generator_address;
-};
 
-struct method_info {
-    std::vector<std::string> arg_names;
-    std::vector<std::string> arg_types;
-};
+    os << "label: " << data.label << std::endl;
+    os << "n: " << data.n << std::endl;
+    os << "coverage: " << data.coverage << std::endl;
+    os << "length: " << data.length << std::endl;
+    os << "duplicates: " << data.duplicates << std::endl;
+    os << "adaptive: " << data.adaptive << std::endl;
+    os << "Internal:" << std::endl;
+    os << "    framework: " << data.internal.framework << std::endl;
+    os << "    method_name_qualified: " << data.internal.method_name_qualified << std::endl;
+    os << "    test_session_id: " << data.internal.test_session_id << std::endl;
+    os << "    timestamp: " << data.internal.timestamp << std::endl;
+    os << "    method_info_ready: " << data.internal.timestamp << std::endl;
+    os << "    arg_names: "; for (auto i: data.internal.arg_names) os << i << ' '; os << std::endl;
+    os << "    arg_types: "; for (auto i: data.internal.arg_types) os << i << ' '; os << std::endl;
+    os << "Feedback:" << std::endl;
+    os << "    test_cases_total: " << data.feedback.test_cases_total << std::endl;
+    os << "    test_cases_parsed: " << data.feedback.test_cases_parsed << std::endl;
+    os << "    transmission_finished: " << data.feedback.transmission_finished << std::endl;
+    os << "Connection: " << std::endl;
+    os << "    generator_address: " << data.connection.generator_address << std::endl;
+
+    return os;
+}
 
 class serializer {
     std::unordered_map<std::type_index, std::function<std::string(const std::any&)>> _serializers;
@@ -1619,12 +1668,11 @@ class test_queue {
     std::mutex _cv_mutex;
     std::condition_variable _cv;
 
-    method_info _method_info;
-    bool _method_info_ready;
+    session_data _session_data;
 
 public:
 
-    test_queue() : _done(false), _begin(*this), _end(*this, true), _method_info_ready(false) {
+    test_queue() : _done(false), _begin(*this), _end(*this, true) {
     }
 
     const_iterator begin() const {
@@ -1708,7 +1756,7 @@ public:
             _cv.wait(cv_lock);
         }
 
-        return _method_info.arg_types;
+        return _session_data.internal.arg_types;
     }
         
     std::vector<std::string> get_argument_names() {
@@ -1718,24 +1766,24 @@ public:
             _cv.wait(cv_lock);
         }
 
-        return _method_info.arg_names;
+        return _session_data.internal.arg_names;
     }
 
 private:
 
     void _set_method_info_ready() {
 
-        _method_info_ready = true;
+        _session_data.internal.method_info_ready = true;
     }
 
     bool& _get_method_info_ready() {
 
-        return _method_info_ready;
+        return _session_data.internal.method_info_ready;
     }
 
-    method_info& _get_method_info() {
+    session_data& _get_session_data() {
 
-        return _method_info;
+        return _session_data;
     }
 
 };
@@ -2237,17 +2285,10 @@ private:
 
                 auto [name, value] = _parse_test_line(test);
                 if (name == "info" && value.to_str() != "alive" && !result->_get_method_info_ready()) {
-                    std::string method_signature = value.to_str();
-                    std::replace(method_signature.begin(), method_signature.end(), '\'', '\"');
-
-                    auto [name_1, value_1] = _parse_test_line(method_signature);
-                    if (name_1 == "method") {
-                        if (_parse_method_info(value_1.to_str(), result->_get_method_info())) {
-                            result->_set_method_info_ready();
-                        }
-                    }
+                    _parse_method_header(value.to_str(), result->_get_session_data());
+                    std::cerr << result->_get_session_data();
                 } else if (name == "testCase" && result->_get_method_info_ready()) {
-                    result->insert(_parse_test_case(value, result->_get_method_info()));
+                    result->insert(_parse_test_case(value, result->_get_session_data()));
                 }
 
             }
@@ -2406,7 +2447,39 @@ private:
         return url;
     }
 
-    bool _parse_method_info(const std::string& line, method_info& method_info) {
+    
+
+    void _parse_method_header(std::string line, session_data& session_data) {
+      std::replace(line.begin(), line.end(), '\'', '\"');
+
+      picojson::value v;
+      std::string err = picojson::parse(v, line);
+      
+      if (false == err.empty()) {
+        std::cerr << "Cannot parse method header line '" << line << "': " << err << std::endl;
+        return;
+      }
+
+      if (v.is<picojson::object>()) {
+
+        try {
+          session_data.internal.method_name_qualified = v.get<picojson::object>()["method"].to_str();
+          session_data.internal.test_session_id = v.get<picojson::object>()["testSessionId"].to_str();
+          session_data.internal.timestamp = v.get<picojson::object>()["timestamp"].to_str();
+
+          _parse_method_info(session_data.internal.method_name_qualified, session_data);
+
+        } catch(const std::exception& e) {
+          std::cerr << "Exception caught: " << e.what() << ". The method header does not contain critical information: " << line << std::endl;
+        }
+
+      } else {
+        std::cerr << "Error: method header should be a JSON object" << std::endl;
+      }
+
+    }
+
+    void _parse_method_info(const std::string& line, session_data& session_data) {
         auto begin = line.find_first_of("(");
         auto end = line.find_last_of(")");
         auto args = line.substr(begin + 1, end - begin - 1);
@@ -2418,14 +2491,14 @@ private:
             token = token.substr(token.find_first_not_of(" "));
             std::string arg_type = token.substr(0, token.find(" "));
             std::string arg_name = token.substr(token.find(" ") + 1);
-            method_info.arg_names.push_back(arg_name);
-            method_info.arg_types.push_back(arg_type);
+            session_data.internal.arg_names.push_back(arg_name);
+            session_data.internal.arg_types.push_back(arg_type);
         }
 
-        return true;
+        session_data.internal.method_info_ready = true;
     }
 
-    test_arguments _parse_test_case(picojson::value test, method_info& method_info) {
+    test_arguments _parse_test_case(picojson::value test, session_data& session_data) {
         test_arguments result;
 
         if (test.is<picojson::array>()) {
@@ -2436,7 +2509,7 @@ private:
                     
                 try {                    
                     std::string value = element.get<picojson::object>()["value"].to_str();
-                    result.add(method_info.arg_names[arg_index], method_info.arg_types[arg_index], value);
+                    result.add(session_data.internal.arg_names[arg_index], session_data.internal.arg_types[arg_index], value);
                 } catch(const std::exception& e) {
                     std::cerr << "Exception caught: " << e.what() << ". Too many parameters in the test: " << test.to_str() << std::endl;
                 }
