@@ -1292,22 +1292,26 @@ struct session_data_connection {
   std::string generator_address = "";
 };
 
-struct session_data {
-  std::string model;
-  std::string method_name;
-  ecfeed::template_type template_type;
-  ecfeed::data_source data_source;
-  std::any constraints;
-  std::any choices;
-  std::any test_suites;
-  std::string label;
-  std::map<std::string, std::string> custom;
+struct session_data_properties {
   int n = -1;
   int coverage = -1;
   int length = -1;
   bool duplicates = false;
   bool adaptive = true;
+};
 
+struct session_data {
+  std::string model;
+  std::string method_name;
+  ecfeed::template_type template_type;
+  ecfeed::data_source data_source;
+  std::string label;
+  std::map<std::string, std::string> custom;
+  std::any constraints;
+  std::any choices;
+  std::any test_suites;
+  
+  ecfeed::session_data_properties properties;
   ecfeed::session_data_feedback feedback;
   ecfeed::session_data_internal internal;
   ecfeed::session_data_connection connection;
@@ -1337,11 +1341,12 @@ std::ostream& operator<<(std::ostream& os, const session_data& data)
 
 
     os << "label: " << data.label << std::endl;
-    os << "n: " << data.n << std::endl;
-    os << "coverage: " << data.coverage << std::endl;
-    os << "length: " << data.length << std::endl;
-    os << "duplicates: " << data.duplicates << std::endl;
-    os << "adaptive: " << data.adaptive << std::endl;
+    os << "Properties: " << std::endl;
+    os << "    n: " << data.properties.n << std::endl;
+    os << "    coverage: " << data.properties.coverage << std::endl;
+    os << "    length: " << data.properties.length << std::endl;
+    os << "    duplicates: " << data.properties.duplicates << std::endl;
+    os << "    adaptive: " << data.properties.adaptive << std::endl;
     os << "Internal:" << std::endl;
     os << "    framework: " << data.internal.framework << std::endl;
     os << "    method_name_qualified: " << data.internal.method_name_qualified << std::endl;
@@ -1792,16 +1797,30 @@ class params_common_getter {
 protected:
 
     ecfeed::template_type _template_type;
+    std::string _label;
+    std::map<std::string, std::string> _custom;
     std::any _constraints;
     std::any _choices;
 
 public:
 
-    params_common_getter() : _template_type(ecfeed::template_type::csv), _constraints(std::string("ALL")), _choices(std::string("ALL"))
+    params_common_getter() : 
+        _template_type(ecfeed::template_type::csv),
+        _label(std::string("")), 
+        _constraints(std::string("ALL")), 
+        _choices(std::string("ALL"))
     {}
 
     ecfeed::template_type& get_template_type()  {
         return _template_type;
+    }
+
+    std::string& get_label() {
+        return _label;
+    }
+
+    std::map<std::string, std::string> get_custom() {
+        return _custom;
     }
 
     std::any& get_constraints()  {
@@ -1812,6 +1831,18 @@ public:
         return _choices;
     }
 
+    virtual session_data get_session_data() {
+        session_data data;
+
+        data.template_type = _template_type;
+        data.label = _label;
+        data.custom = _custom;
+        data.constraints = _constraints;
+        data.choices = _choices;
+
+        return data;
+    }
+
 };
 
 template<typename T>
@@ -1820,6 +1851,16 @@ public:
 
     T& template_type(ecfeed::template_type template_type) {
         _template_type = template_type;
+        return self();
+    }
+
+    T& label(std::string label) {
+        _label = label;
+        return self();
+    }
+
+    T& custom(std::map<std::string, std::string> custom) {
+        _custom = custom;
         return self();
     }
 
@@ -1959,6 +2000,17 @@ public:
     params_random& self() {
         return *this;
     }
+
+    virtual session_data get_session_data() {
+        session_data data = params_common_getter::get_session_data();
+      
+        data.data_source = data_source::random;
+        data.properties.length = _length;
+        data.properties.duplicates = _duplicates;
+        data.properties.adaptive = _adaptive;
+        
+        return data;
+    }
     
 };
 
@@ -2096,6 +2148,9 @@ public:
     std::shared_ptr<test_queue<test_arguments>> generate_random(const std::string& method, ecfeed::params_random options = ecfeed::params_random()) {
         std::lock_guard<std::mutex> lock(_mutex);
 
+        session_data data = options.get_session_data();
+        data.method_name = method;
+        
         std::map<std::string, std::any> opt = _setup(options, _setup_random(options), data_source::random, false);
 
         return _generate(method, opt);
@@ -2305,6 +2360,39 @@ private:
         return result;
     }
 
+    //     std::shared_ptr<test_queue<test_arguments>> _generate(session_data& data) {
+    //     auto url = _build_generate_url(data);
+
+    //     std::vector<std::string> types;
+    //     std::shared_ptr<test_queue<test_arguments>> result(new test_queue<test_arguments>());
+
+    //     std::function<size_t(void *data, size_t size, size_t nmemb)> data_cb = [this, result](void *data, size_t size, size_t nmemb) -> size_t {
+
+    //         if (nmemb > 0) {
+    //             std::string test((char*) data, (char*) data + nmemb - 1);
+
+    //             auto [name, value] = _parse_test_line(test);
+    //             if (name == "info" && value.to_str() != "alive" && !result->_get_method_info_ready()) {
+    //                 _parse_method_header(value.to_str(), result->_get_session_data());
+    //                 std::cerr << result->_get_session_data();
+    //             } else if (name == "testCase" && result->_get_method_info_ready()) {
+    //                 result->insert(_parse_test_case(value, result->_get_session_data()));
+    //             }
+
+    //         }
+
+    //         return nmemb;
+    //     };
+
+    //     _running_requests.push_back(std::async(std::launch::async, [result, url, data_cb, this]() {
+
+    //         _perform_request(url, &data_cb);
+    //         result->finish();
+    //     }));
+
+    //     return result;
+    // }
+
     void _dump_key_store() {
         std::FILE* pkey_file = fopen(_pkey_path.string().c_str(), "w");
         std::FILE* cert_file = fopen(_cert_path.string().c_str(), "w");
@@ -2395,6 +2483,11 @@ private:
         return _build_request_url(method, "requestData", options);
     }
 
+    // std::string _build_generate_url(const session_data& data) {
+
+    //     return _build_request_url(method, "requestData", options);
+    // }
+
     std::string _build_request_url(const std::string& method, const std::string& request_type, std::map<std::string, std::any>& opt) {
         std::string url;
 
@@ -2446,6 +2539,58 @@ private:
 
         return url;
     }
+
+    // std::string _build_request_url(const session_data& data, const std::string& request_type) {
+    //     std::string url;
+
+    //     url += "https://" + _genserver + "/testCaseService";
+    //     url += "?requestType=" + request_type;
+    //     url += "&client=cpp";
+    //     url += "&request={\"method\":\"" + data.method + "\"";
+
+    //     if (opt.count("model") == 0) {
+    //         url += ",\"model\":\"" + model + "\"";
+    //     } else {
+    //         url += ",\"model\":\"" + std::any_cast<std::string>(opt["model"]) + "\"";
+    //         opt.erase("model");
+    //     }
+
+    //     if (opt.count("template") > 0) {
+    //         url += ",\"template\":\"" + template_type_url_param(std::any_cast<template_type>(opt["template"])) + "\"";
+    //         opt.erase("template");
+    //     } else if (request_type == "requestExport") {
+    //         url += ",\"template\":\"CSV\"";
+    //     }
+
+    //     if (opt.size() != 0) {
+    //         url += ",\"userData\":\"{";
+    //         std::string padding = "";
+
+    //         for (const std::pair<std::string, std::any>& option : opt) {
+    //             url += padding + _serializer.serialize(option);
+    //             padding = ",";
+    //         }
+
+    //         url += "}\"";
+    //     }
+
+    //     url += "}";
+
+    //     try {
+    //         url = std::regex_replace(url, std::regex("\\\""), "%22");
+    //         url = std::regex_replace(url, std::regex("'"),  "%27");
+    //         url = std::regex_replace(url, std::regex("\\{"),  "%7B");
+    //         url = std::regex_replace(url, std::regex("\\}"),  "%7D");
+    //         url = std::regex_replace(url, std::regex("\\["),  "%5B");
+    //         url = std::regex_replace(url, std::regex("\\]"),  "%5D");
+    //     } catch (const std::regex_error& e) {
+    //         std::cerr << e.what() << std::endl;
+    //     }
+
+    //     // std::cout << "url:" << url << std::endl;
+
+    //     return url;
+    // }
 
     
 
