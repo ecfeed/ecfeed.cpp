@@ -1227,7 +1227,7 @@ enum class template_type {
     xml = 2,
     gherkin = 3,
     json = 4,
-    raw = 5,
+    raw = 5
 };
 
 static std::string template_type_url_param(const template_type& t) {
@@ -1277,41 +1277,29 @@ struct session_data_feedback {
   bool transmission_finished = false;
 };
 
+struct session_data_connection {
+  std::string generator_address;
+};
+
 struct session_data_internal {
   std::string framework = "C++";
-  std::string method_name_qualified = "";
-  std::string test_session_id = "";
-  std::string timestamp = "";
+  std::string method_name_qualified;
+  std::string test_session_id;
+  std::string timestamp;
   std::any test_results;
   std::vector<std::string> arg_names;
   std::vector<std::string> arg_types;
   bool method_info_ready = false;
 };
 
-struct session_data_connection {
-  std::string generator_address = "";
-};
-
-struct session_data_properties {
-  int n = -1;
-  int coverage = -1;
-  int length = -1;
-  bool duplicates = false;
-  bool adaptive = true;
-};
-
 struct session_data {
   std::string model;
   std::string method_name;
-  ecfeed::template_type template_type;
   ecfeed::data_source data_source;
-  std::string label;
-  std::map<std::string, std::string> custom;
-  std::any constraints;
-  std::any choices;
-  std::any test_suites;
   
-  ecfeed::session_data_properties properties;
+  std::map<std::string, std::any> main;
+  std::map<std::string, std::string> properties;
+  
   ecfeed::session_data_feedback feedback;
   ecfeed::session_data_internal internal;
   ecfeed::session_data_connection connection;
@@ -1319,48 +1307,194 @@ struct session_data {
   friend std::ostream& operator<<(std::ostream& os, const session_data& data);
 };
 
+std::string _get_properties_parameter(const session_data& data, std::string parameter) {
+  auto result = data.properties.find(parameter);
+
+  if (result == data.properties.end()) {
+    return "    " + parameter + ": -"; 
+  } else {
+    return "    " + parameter + ": " + result->second;
+  }
+}
+
+std::string _show_properties(const session_data& data) {
+  
+  return "Properties: \n" +
+    _get_properties_parameter(data, "n") + "\n" +
+    _get_properties_parameter(data, "coverage") + "\n" +
+    _get_properties_parameter(data, "length") + "\n" +
+    _get_properties_parameter(data, "duplicates") + "\n" +
+    _get_properties_parameter(data, "adaptive") + "\n";
+}
+
+std::string _show_feedback(const session_data& data) {
+  
+  return std::string("Feedback: \n") +
+    "    test cases total: " + std::to_string(data.feedback.test_cases_total) + "\n" +
+    "    test cases parsed: " + std::to_string(data.feedback.test_cases_parsed) + "\n" +
+    "    transmission: " + (data.feedback.transmission_finished ? "finished" : "pending") + "\n";
+}
+
+std::string _show_internal(const session_data& data) {
+
+  auto results = std::string("Internal: \n") +
+    "    framework: " + data.internal.framework + "\n" +
+    "    qualified method name: " + (data.internal.method_name_qualified == "" ? "-" : data.internal.method_name_qualified) + "\n" +
+    "    test session id: " + (data.internal.test_session_id == "" ? "-" : data.internal.test_session_id) + "\n" +
+    "    timestamp: " + (data.internal.timestamp == "" ? "-" : data.internal.timestamp) + "\n" +
+    "    method header parsed: " +  (data.internal.method_info_ready  ? "yes" : "no") + "\n";
+
+  results += "    method argument names: ["; 
+  for (auto i: data.internal.arg_names) { 
+    results += " " + i; 
+  }
+  results += " ]\n";
+
+  results += "    method argument types: ["; 
+  for (auto i: data.internal.arg_types) { 
+    results += " " + i; 
+  }
+  results += " ]\n";
+
+  return results;
+}
+
+std::string _get_main_label(const session_data& data) {
+  auto element = data.main.find("label");
+  std::string result = "    label: ";
+  
+  result += (element == data.main.end()) ? "-" : std::any_cast<std::string>(element->second);
+
+  return result + "\n";
+}
+
+std::string _get_main_template(const session_data& data) {
+  auto element = data.main.find("template");
+  std::string result = "    template: ";
+  
+  result += (element == data.main.end()) ? "-" : template_type_url_param(std::any_cast<ecfeed::template_type>(element->second));
+
+  return result + "\n";
+}
+
+std::string _get_main_custom(const session_data& data) {
+  auto element = data.main.find("custom");
+  std::string result = "    custom: ";
+
+  if (element == data.main.end()) {
+    return result + "-\n";
+  } else {
+    
+    result += "[ ";
+    for (auto const& x : std::any_cast<std::map<std::string, std::string>>(element->second)) {
+      result += "{ " + x.first + " : " + x.second + " } ";
+    }
+
+    return result + "]\n";
+  }
+}
+
+std::string _get_main_constraints(const session_data& data) {
+  auto element = data.main.find("constraints");
+  std::string result = "    constraints: ";
+
+  if (element == data.main.end()) {
+    return result += "-\n";
+  }
+
+  try {
+    result += std::any_cast<std::string>(element->second) + "\n";
+  } catch(std::bad_any_cast) {
+
+    result += "[ ";
+    for (auto const& x : std::any_cast<std::set<std::string>>(element->second)) {
+      result +=  x + " ";
+    }
+
+  }
+
+  return result + "]\n";
+}
+
+std::string _get_main_test_suites(const session_data& data) {
+  auto element = data.main.find("test_suites");
+  std::string result = "    test suites: ";
+
+  if (element == data.main.end()) {
+    return result += "-\n";
+  }
+
+  try {
+    result += std::any_cast<std::string>(element->second) + "\n";
+  } catch(std::bad_any_cast) {
+
+    result += "[ ";
+    for (auto const& x : std::any_cast<std::set<std::string>>(element->second)) {
+      result +=  x + " ";
+    }
+
+  }
+
+  return result + "]\n";
+}
+
+std::string _get_main_choices(const session_data& data) {
+  auto element = data.main.find("choices");
+  std::string result = "    choices: ";
+
+  if (element == data.main.end()) {
+    return result += "-\n";
+  }
+
+  try {
+    result += std::any_cast<std::string>(element->second) + "\n";
+  } catch (std::bad_any_cast) {
+
+    result += "[";
+    for (auto const& x : std::any_cast<std::map<std::string, std::set<std::string>>>(element->second)) {
+     
+      result +=  " " + x.first + " {";
+      for (auto const& y : x.second) {
+        result +=  y + " "; 
+      }
+
+      result += "}";
+    }
+
+  }
+
+  return result + " ]\n";
+}
+
+std::string _show_main(const session_data& data) {
+
+  auto results = std::string("Main: \n") +
+    "    model: " + data.model + "\n" +
+    "    method: " + data.method_name + "\n" +
+    _get_main_label(data) + 
+    _get_main_template(data) +
+    "    algorithm: " + data_source_url_param(data.data_source) + "\n" +
+    _get_main_custom(data) +
+    _get_main_constraints(data) +
+    _get_main_test_suites(data) +
+    _get_main_choices(data);
+
+  return results;
+}
+
+std::string _show_connection(const session_data& data) {
+  
+  return std::string("Connection: \n") +
+    "    generator_address: " + data.connection.generator_address + "\n";
+}
+
 std::ostream& operator<<(std::ostream& os, const session_data& data)
 {
-    os << "model: " << data.model << std::endl;
-    os << "method_name: " << data.method_name << std::endl;
-    os << "template_type: " << template_type_url_param(data.template_type) << std::endl;
-    os << "data_source: " << data_source_url_param(data.data_source) << std::endl;
-    os << "label: " << data.label << std::endl;
-    os << "custom: "; for(auto elem : data.custom) { os << elem.first << " " << elem.second << std::endl; }; os << std::endl;
-    
-    os << "constraints: "; os << data.constraints.type().name();
-    if (data.constraints.type() == typeid(std::string)) {
-     if (std::any_cast<std::string>(data.constraints) != "ALL") {
-        os << "stringi";
-     }
-    } else {
-        os << "nie stringi";
-    } 
-    os << std::endl;
-
-
-
-    os << "label: " << data.label << std::endl;
-    os << "Properties: " << std::endl;
-    os << "    n: " << data.properties.n << std::endl;
-    os << "    coverage: " << data.properties.coverage << std::endl;
-    os << "    length: " << data.properties.length << std::endl;
-    os << "    duplicates: " << data.properties.duplicates << std::endl;
-    os << "    adaptive: " << data.properties.adaptive << std::endl;
-    os << "Internal:" << std::endl;
-    os << "    framework: " << data.internal.framework << std::endl;
-    os << "    method_name_qualified: " << data.internal.method_name_qualified << std::endl;
-    os << "    test_session_id: " << data.internal.test_session_id << std::endl;
-    os << "    timestamp: " << data.internal.timestamp << std::endl;
-    os << "    method_info_ready: " << data.internal.timestamp << std::endl;
-    os << "    arg_names: "; for (auto i: data.internal.arg_names) os << i << ' '; os << std::endl;
-    os << "    arg_types: "; for (auto i: data.internal.arg_types) os << i << ' '; os << std::endl;
-    os << "Feedback:" << std::endl;
-    os << "    test_cases_total: " << data.feedback.test_cases_total << std::endl;
-    os << "    test_cases_parsed: " << data.feedback.test_cases_parsed << std::endl;
-    os << "    transmission_finished: " << data.feedback.transmission_finished << std::endl;
-    os << "Connection: " << std::endl;
-    os << "    generator_address: " << data.connection.generator_address << std::endl;
+    os << _show_main(data);
+    os << _show_properties(data);
+    os << _show_internal(data);
+    os << _show_feedback(data);
+    os << _show_connection(data);
 
     return os;
 }
@@ -1834,11 +1968,11 @@ public:
     virtual session_data get_session_data() {
         session_data data;
 
-        data.template_type = _template_type;
-        data.label = _label;
-        data.custom = _custom;
-        data.constraints = _constraints;
-        data.choices = _choices;
+        data.main["template"] = _template_type;
+        data.main["label"] = _label;
+        data.main["custom"] = _custom;
+        data.main["constraints"] = _constraints;
+        data.main["choices"] = _choices;
 
         return data;
     }
@@ -2005,10 +2139,11 @@ public:
         session_data data = params_common_getter::get_session_data();
       
         data.data_source = data_source::random;
-        data.properties.length = _length;
-        data.properties.duplicates = _duplicates;
-        data.properties.adaptive = _adaptive;
         
+        data.properties["length"] = std::to_string(_length);
+        data.properties["duplicates"] = std::to_string(_duplicates);
+        data.properties["adaptive"] = std::to_string(_adaptive);
+
         return data;
     }
     
@@ -2149,7 +2284,12 @@ public:
         std::lock_guard<std::mutex> lock(_mutex);
 
         session_data data = options.get_session_data();
+        data.model = model;
         data.method_name = method;
+        data.connection.generator_address = _genserver;
+
+
+        std::cerr << data << "\n----------\n";
         
         std::map<std::string, std::any> opt = _setup(options, _setup_random(options), data_source::random, false);
 
