@@ -1490,13 +1490,54 @@ std::string _show_connection(const session_data& data) {
     "    request type: " + data.connection.request_type + "\n";
 }
 
-std::ostream& operator<<(std::ostream& os, const session_data& data)
-{
+std::ostream& operator<<(std::ostream& os, const session_data& data) {
     os << _show_main(data);
     os << _show_properties(data);
     os << _show_internal(data);
     os << _show_feedback(data);
     os << _show_connection(data);
+
+    return os;
+}
+
+class test_handle {
+  const session_data& _session_data;
+  std::string _data;
+  std::string _id;
+  bool _pending = true;
+  std::string _status;
+  int _duration = -1;
+  std::string _comment;
+  std::map<std::string, std::string> _custom;
+
+  friend std::ostream& operator<<(std::ostream& os, const test_handle& test_handle);
+
+public:
+
+  test_handle(const session_data& session_data, std::string data, std::string id) : _session_data(session_data), _data(data), _id(id) {
+  }
+};
+
+std::ostream& operator<<(std::ostream& os, const test_handle& test_handle) {
+    os << "Handler:" << std::endl;
+    os << "    processed: " << (test_handle._pending ? "false" : "true") << std::endl;
+    os << "    data: " << test_handle._data << std::endl;
+    os << "    id: " << test_handle._id << std::endl;
+    os << "    status: " << (test_handle._status != "" ? test_handle._status : "-") << std::endl;
+    os << "    duration: " << (test_handle._duration > 0 ? std::to_string(test_handle._duration) + "[ms]" : "-") << std::endl; 
+    os << "    comment: " << (test_handle._comment != "" ? test_handle._comment : "-") << std::endl;
+
+    if (test_handle._custom.size() == 0) {
+      os << "    custom: -" << std::endl;
+    } else {
+    
+      os << "[ ";
+      for (auto const& x : test_handle._custom) {
+        os << "{ " + x.first + " : " + x.second + " } ";
+      }
+
+      os << "]" << std::endl;
+    }
 
     return os;
 }
@@ -1857,6 +1898,8 @@ public:
 
         _data.push_back(element);
         _cv.notify_one();
+
+        _session_data.feedback.test_cases_total++;
     }
 
     T& current_element() {
@@ -1876,6 +1919,9 @@ public:
 
         _done = true;
         _cv.notify_one();
+
+        _session_data.feedback.transmission_finished = true;
+        std::cerr << _session_data;
     }
 
     bool empty() {
@@ -1971,8 +2017,12 @@ public:
         return _choices;
     }
 
-    virtual session_data get_session_data() {
+    virtual session_data get_session_data(const std::string& model, const std::string& method, const std::string& generator) {
         session_data data;
+
+        data.model = model;
+        data.method_name = method;
+        data.connection.generator_address = generator;
 
         data.main["template"] = _template_type;
         data.main["label"] = _label;
@@ -2059,6 +2109,17 @@ public:
     params_nwise& self() {
       return *this;
     }
+
+    virtual session_data get_session_data(const std::string& model, const std::string& method, const std::string& generator) {
+        session_data data = params_common_getter::get_session_data(model, method, generator);
+      
+        data.data_source = data_source::nwise;
+
+        data.properties["n"] = std::to_string(_n);
+        data.properties["coverage"] = std::to_string(_coverage);
+
+        return data;
+    }
     
 };
 
@@ -2088,6 +2149,17 @@ public:
     params_pairwise& self() {
       return *this;
     }
+
+    virtual session_data get_session_data(const std::string& model, const std::string& method, const std::string& generator) {
+        session_data data = params_common_getter::get_session_data(model, method, generator);
+      
+        data.data_source = data_source::nwise;
+
+        data.properties["n"] = std::to_string(_n);
+        data.properties["coverage"] = std::to_string(_coverage);
+
+        return data;
+    }
     
 };
 
@@ -2096,6 +2168,14 @@ public:
 
     params_cartesian& self() {
       return *this;
+    }
+
+    virtual session_data get_session_data(const std::string& model, const std::string& method, const std::string& generator) {
+        session_data data = params_common_getter::get_session_data(model, method, generator);
+      
+        data.data_source = data_source::cartesian;
+
+        return data;
     }
 };
 
@@ -2141,11 +2221,11 @@ public:
         return *this;
     }
 
-    virtual session_data get_session_data() {
-        session_data data = params_common_getter::get_session_data();
+    virtual session_data get_session_data(const std::string& model, const std::string& method, const std::string& generator) {
+        session_data data = params_common_getter::get_session_data(model, method, generator);
       
         data.data_source = data_source::random;
-        
+
         data.properties["length"] = std::to_string(_length);
         data.properties["duplicates"] = _duplicates ? "true" : "false";
         data.properties["adaptive"] = _adaptive ? "true" : "false";
@@ -2180,6 +2260,16 @@ public:
 
     params_static& self() {
         return *this;
+    }
+
+    virtual session_data get_session_data(const std::string& model, const std::string& method, const std::string& generator) {
+        session_data data = params_common_getter::get_session_data(model, method, generator);
+      
+        data.data_source = data_source::static_data;
+
+        data.main["test_suites"] = _test_suites;
+
+        return data;
     }
 
 };
@@ -2249,53 +2339,53 @@ public:
     std::shared_ptr<test_queue<std::string>> export_nwise(const std::string& method, ecfeed::params_nwise options = ecfeed::params_nwise()) {
         std::lock_guard<std::mutex> lock(_mutex);
 
-        std::map<std::string, std::any> opt = _setup(options, _setup_nwise(options), data_source::nwise, true);
-       
-        return _export(method, opt);
+        session_data data = options.get_session_data(model, method, _genserver);
+        data.connection.request_type = "requestExport";
+
+        return _export(data);
     }
 
     std::shared_ptr<test_queue<test_arguments>> generate_nwise(const std::string& method, ecfeed::params_nwise options = ecfeed::params_nwise()) {
         std::lock_guard<std::mutex> lock(_mutex);
 
-        std::map<std::string, std::any> opt = _setup(options, _setup_nwise(options), data_source::nwise, false);
-
-        return _generate(method, opt);
+        session_data data = options.get_session_data(model, method, _genserver);
+        data.connection.request_type = "requestData";
+        
+        return _generate(data);
     }
 
     std::shared_ptr<test_queue<std::string>> export_pairwise(const std::string& method, ecfeed::params_pairwise options = ecfeed::params_pairwise()) {
         std::lock_guard<std::mutex> lock(_mutex);
 
-        std::map<std::string, std::any> opt = _setup(options, _setup_pairwise(options), data_source::nwise, true);
+        session_data data = options.get_session_data(model, method, _genserver);
+        data.connection.request_type = "requestExport";
 
-        return _export(method, opt);
+        return _export(data);
     }
 
     std::shared_ptr<test_queue<test_arguments>> generate_pairwise(const std::string& method, ecfeed::params_pairwise options = ecfeed::params_pairwise()) {
         std::lock_guard<std::mutex> lock(_mutex);
 
-        std::map<std::string, std::any> opt = _setup(options, _setup_pairwise(options), data_source::nwise, false);
-
-        return _generate(method, opt);
+        session_data data = options.get_session_data(model, method, _genserver);
+        data.connection.request_type = "requestData";
+        
+        return _generate(data);
     }
 
     std::shared_ptr<test_queue<std::string>> export_random(const std::string& method, ecfeed::params_random options = ecfeed::params_random()) {
         std::lock_guard<std::mutex> lock(_mutex);
 
-        std::map<std::string, std::any> opt = _setup(options, _setup_random(options), data_source::random, true);
+        session_data data = options.get_session_data(model, method, _genserver);
+        data.connection.request_type = "requestExport";
 
-        return _export(method, opt);
+        return _export(data);
     }
 
     std::shared_ptr<test_queue<test_arguments>> generate_random(const std::string& method, ecfeed::params_random options = ecfeed::params_random()) {
         std::lock_guard<std::mutex> lock(_mutex);
 
-        session_data data = options.get_session_data();
-        data.model = model;
-        data.method_name = method;
-        data.connection.generator_address = _genserver;
+        session_data data = options.get_session_data(model, method, _genserver);
         data.connection.request_type = "requestData";
-
-        std::cerr << data << "\n----------\n";
         
         return _generate(data);
     }
@@ -2303,35 +2393,37 @@ public:
     std::shared_ptr<test_queue<std::string>> export_cartesian(const std::string& method, ecfeed::params_cartesian options = ecfeed::params_cartesian()) {
         std::lock_guard<std::mutex> lock(_mutex);
 
-        std::map<std::string, std::any> opt = _setup(options, _setup_cartesian(options), data_source::cartesian, true);
+        session_data data = options.get_session_data(model, method, _genserver);
+        data.connection.request_type = "requestExport";
 
-        return _export(method, opt);
+        return _export(data);
     }
 
     std::shared_ptr<test_queue<test_arguments>> generate_cartesian(const std::string& method, ecfeed::params_cartesian options = ecfeed::params_cartesian()) {
         std::lock_guard<std::mutex> lock(_mutex);
 
-        std::map<std::string, std::any> opt = _setup(options, _setup_cartesian(options), data_source::cartesian, false);
-
-        return _generate(method, opt);
+        session_data data = options.get_session_data(model, method, _genserver);
+        data.connection.request_type = "requestData";
+        
+        return _generate(data);
     }
 
     std::shared_ptr<test_queue<std::string>> export_static(const std::string& method, ecfeed::params_static options = ecfeed::params_static()) {
         std::lock_guard<std::mutex> lock(_mutex);
 
-        std::map<std::string, std::any> opt = _setup(options, _setup_static(options), data_source::static_data, true);
-        opt["testSuites"] =  options.get_test_suites();
+        session_data data = options.get_session_data(model, method, _genserver);
+        data.connection.request_type = "requestExport";
 
-        return _export(method, opt);
+        return _export(data);
     }
 
     std::shared_ptr<test_queue<test_arguments>> generate_static(const std::string& method, ecfeed::params_static options = ecfeed::params_static()) {
         std::lock_guard<std::mutex> lock(_mutex);
 
-        std::map<std::string, std::any> opt = _setup(options, _setup_static(options), data_source::static_data, false);
-        opt["testSuites"] =  options.get_test_suites();
-
-        return _generate(method, opt);
+        session_data data = options.get_session_data(model, method, _genserver);
+        data.connection.request_type = "requestData";
+        
+        return _generate(data);
     }
         
 private:
@@ -2358,74 +2450,6 @@ private:
         }
     }
 
-    std::map<std::string, std::any> _setup_nwise(ecfeed::params_nwise& options) {
-        std::map<std::string, std::any> properties;
-
-        properties["n"] = options.get_n();
-        properties["coverage"] = options.get_coverage();
-
-        return properties;
-    }
-
-    std::map<std::string, std::any> _setup_pairwise(ecfeed::params_pairwise& options) {
-        std::map<std::string, std::any> properties;
-
-        properties["coverage"] = options.get_coverage();
-
-        return properties;
-    }
-        
-    std::map<std::string, std::any> _setup_random(ecfeed::params_random& options) {
-        std::map<std::string, std::any> properties;
-
-        properties["length"] = options.get_length();
-        properties["duplicates"] = options.get_duplicates();
-        properties["adaptive"] = options.get_adaptive();
-
-        return properties;
-    }
-
-    std::map<std::string, std::any> _setup_cartesian(ecfeed::params_cartesian& options) {
-        std::map<std::string, std::any> properties;
-
-        return properties;
-    }
-
-    std::map<std::string, std::any> _setup_static(ecfeed::params_static& options) {
-        std::map<std::string, std::any> properties;
-
-        return properties;
-    }
-
-    std::map<std::string, std::any> _setup(params_common_getter& options, std::map<std::string, std::any> properties, data_source source, bool format) {
-        std::map<std::string, std::any> opt;
-
-        if (options.get_constraints().type() == typeid(std::string)) {
-            if (std::any_cast<std::string>(options.get_constraints()) != "ALL") {
-                opt["constraints"] =  options.get_constraints();
-            }
-        } else {
-            opt["constraints"] =  options.get_constraints();
-        }
-
-        if (options.get_choices().type() == typeid(std::string)) {
-            if (std::any_cast<std::string>(options.get_choices()) != "ALL") {
-                opt["choices"] =  options.get_choices();
-            }
-        } else {
-            opt["choices"] =  options.get_choices();
-        }
-
-        opt["dataSource"] = source;
-        opt["properties"] = properties;
-
-        if (format) {
-            opt["template"] = options.get_template_type();
-        }
-
-        return opt;
-    }
-
     void _perform_request(const std::string& url, const std::function<size_t(void *data, size_t size, size_t nmemb)>* data_callback) {
         char error_buf[128];
         curl_easy_setopt(_curl_handle, CURLOPT_SSLCERT, _cert_path.string().c_str());
@@ -2449,9 +2473,10 @@ private:
 
     }
 
-    std::shared_ptr<test_queue<std::string>> _export(const std::string& method, std::map<std::string, std::any>& options) {
-        auto url = _build_export_url(method, options);
-        std::shared_ptr<test_queue<std::string>> result(new test_queue<std::string>());
+    std::shared_ptr<test_queue<std::string>> _export(session_data& data) {
+        auto url = _build_generate_url(data);
+
+        std::shared_ptr<test_queue<std::string>> result(new test_queue<std::string>(data));
 
         std::function<size_t(void *data, size_t size, size_t nmemb)> data_cb = [result](void *data, size_t size, size_t nmemb) -> size_t {
 
@@ -2471,11 +2496,11 @@ private:
         return result;
     }
 
-    std::shared_ptr<test_queue<test_arguments>> _generate(const std::string& method, std::map<std::string, std::any>& options) {
-        auto url = _build_generate_url(method, options);
+    std::shared_ptr<test_queue<test_arguments>> _generate(session_data& session_data) {
+        auto url = _build_generate_url(session_data);
 
         std::vector<std::string> types;
-        std::shared_ptr<test_queue<test_arguments>> result(new test_queue<test_arguments>());
+        std::shared_ptr<test_queue<test_arguments>> result(new test_queue<test_arguments>(session_data));
 
         std::function<size_t(void *data, size_t size, size_t nmemb)> data_cb = [this, result](void *data, size_t size, size_t nmemb) -> size_t {
 
@@ -2485,40 +2510,6 @@ private:
                 auto [name, value] = _parse_test_line(test);
                 if (name == "info" && value.to_str() != "alive" && !result->_get_method_info_ready()) {
                     _parse_method_header(value.to_str(), result->_get_session_data());
-                    std::cerr << result->_get_session_data();
-                } else if (name == "testCase" && result->_get_method_info_ready()) {
-                    result->insert(_parse_test_case(value, result->_get_session_data()));
-                }
-
-            }
-
-            return nmemb;
-        };
-
-        _running_requests.push_back(std::async(std::launch::async, [result, url, data_cb, this]() {
-
-            _perform_request(url, &data_cb);
-            result->finish();
-        }));
-
-        return result;
-    }
-
-        std::shared_ptr<test_queue<test_arguments>> _generate(session_data& data) {
-        auto url = _build_generate_url(data);
-
-        std::vector<std::string> types;
-        std::shared_ptr<test_queue<test_arguments>> result(new test_queue<test_arguments>(data));
-
-        std::function<size_t(void *data, size_t size, size_t nmemb)> data_cb = [this, result](void *data, size_t size, size_t nmemb) -> size_t {
-
-            if (nmemb > 0) {
-                std::string test((char*) data, (char*) data + nmemb - 1);
-
-                auto [name, value] = _parse_test_line(test);
-                if (name == "info" && value.to_str() != "alive" && !result->_get_method_info_ready()) {
-                    _parse_method_header(value.to_str(), result->_get_session_data());
-                    std::cerr << result->_get_session_data();
                 } else if (name == "testCase" && result->_get_method_info_ready()) {
                     result->insert(_parse_test_case(value, result->_get_session_data()));
                 }
@@ -2607,26 +2598,6 @@ private:
         return result;
     }
 
-    std::string _build_export_url(const std::string& method, std::map<std::string, std::any>& options) {
-
-        if (options.count("template") > 0 && std::any_cast<template_type>(options["template"]) == template_type::raw) {
-            options.erase("template");
-            return _build_request_url(method, "requestData", options);
-        }
-            
-        return _build_request_url(method, "requestExport", options);
-    }
-
-    std::string _build_generate_url(const std::string& method, std::map<std::string, std::any>& options) {
-
-        if (options.count("template") > 0) {
-            std::cerr << "Unexpected option: template\n";
-            options.erase("template");
-        }
-
-        return _build_request_url(method, "requestData", options);
-    }
-
     std::string _build_generate_url(const session_data& data) {
         std::string url;
 
@@ -2695,114 +2666,6 @@ private:
         return url;
     }
 
-    std::string _build_request_url(const std::string& method, const std::string& request_type, std::map<std::string, std::any>& opt) {
-        std::string url;
-
-        url += "https://" + _genserver + "/testCaseService";
-        url += "?requestType=" + request_type;
-        url += "&client=cpp";
-        url += "&request={\"method\":\"" + method + "\"";
-
-        if (opt.count("model") == 0) {
-            url += ",\"model\":\"" + model + "\"";
-        } else {
-            url += ",\"model\":\"" + std::any_cast<std::string>(opt["model"]) + "\"";
-            opt.erase("model");
-        }
-
-        if (opt.count("template") > 0) {
-            url += ",\"template\":\"" + template_type_url_param(std::any_cast<template_type>(opt["template"])) + "\"";
-            opt.erase("template");
-        } else if (request_type == "requestExport") {
-            url += ",\"template\":\"CSV\"";
-        }
-
-        if (opt.size() != 0) {
-            url += ",\"userData\":\"{";
-            std::string padding = "";
-
-            for (const std::pair<std::string, std::any>& option : opt) {
-                url += padding + _serializer.serialize(option);
-                padding = ",";
-            }
-
-            url += "}\"";
-        }
-
-        url += "}";
-
-        std::cout << "url:" << url << std::endl;
-        
-        try {
-            url = std::regex_replace(url, std::regex("\\\""), "%22");
-            url = std::regex_replace(url, std::regex("'"),  "%27");
-            url = std::regex_replace(url, std::regex("\\{"),  "%7B");
-            url = std::regex_replace(url, std::regex("\\}"),  "%7D");
-            url = std::regex_replace(url, std::regex("\\["),  "%5B");
-            url = std::regex_replace(url, std::regex("\\]"),  "%5D");
-        } catch (const std::regex_error& e) {
-            std::cerr << e.what() << std::endl;
-        }
-
-        std::cout << "url:" << url << std::endl;
-
-        return url;
-    }
-
-    // std::string _build_request_url(const session_data& data, const std::string& request_type) {
-    //     std::string url;
-
-    //     url += "https://" + _genserver + "/testCaseService";
-    //     url += "?requestType=" + request_type;
-    //     url += "&client=cpp";
-    //     url += "&request={\"method\":\"" + data.method + "\"";
-
-    //     if (opt.count("model") == 0) {
-    //         url += ",\"model\":\"" + model + "\"";
-    //     } else {
-    //         url += ",\"model\":\"" + std::any_cast<std::string>(opt["model"]) + "\"";
-    //         opt.erase("model");
-    //     }
-
-    //     if (opt.count("template") > 0) {
-    //         url += ",\"template\":\"" + template_type_url_param(std::any_cast<template_type>(opt["template"])) + "\"";
-    //         opt.erase("template");
-    //     } else if (request_type == "requestExport") {
-    //         url += ",\"template\":\"CSV\"";
-    //     }
-
-    //     if (opt.size() != 0) {
-    //         url += ",\"userData\":\"{";
-    //         std::string padding = "";
-
-    //         for (const std::pair<std::string, std::any>& option : opt) {
-    //             url += padding + _serializer.serialize(option);
-    //             padding = ",";
-    //         }
-
-    //         url += "}\"";
-    //     }
-
-    //     url += "}";
-
-    //     try {
-    //         url = std::regex_replace(url, std::regex("\\\""), "%22");
-    //         url = std::regex_replace(url, std::regex("'"),  "%27");
-    //         url = std::regex_replace(url, std::regex("\\{"),  "%7B");
-    //         url = std::regex_replace(url, std::regex("\\}"),  "%7D");
-    //         url = std::regex_replace(url, std::regex("\\["),  "%5B");
-    //         url = std::regex_replace(url, std::regex("\\]"),  "%5D");
-    //     } catch (const std::regex_error& e) {
-    //         std::cerr << e.what() << std::endl;
-    //     }
-
-    //     // std::cout << "url:" << url << std::endl;
-
-    //     return url;
-    // }
-
-    
-
     void _parse_method_header(std::string line, session_data& session_data) {
       std::replace(line.begin(), line.end(), '\'', '\"');
 
@@ -2870,6 +2733,9 @@ private:
 
                 arg_index++;
             }
+
+            test_handle handle(session_data, test.serialize(), "0:" + std::to_string(session_data.feedback.test_cases_parsed++)); 
+            std::cerr << handle;
         }
 
         if (! test.is<picojson::array>()) {
