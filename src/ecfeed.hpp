@@ -1279,6 +1279,7 @@ struct session_data_feedback {
 
 struct session_data_connection {
   std::string generator_address;
+  std::string request_type;
 };
 
 struct session_data_internal {
@@ -1485,7 +1486,8 @@ std::string _show_main(const session_data& data) {
 std::string _show_connection(const session_data& data) {
   
   return std::string("Connection: \n") +
-    "    generator_address: " + data.connection.generator_address + "\n";
+    "    generator address: " + data.connection.generator_address + "\n" +
+    "    request type: " + data.connection.request_type + "\n";
 }
 
 std::ostream& operator<<(std::ostream& os, const session_data& data)
@@ -1810,6 +1812,10 @@ class test_queue {
     session_data _session_data;
 
 public:
+
+    test_queue(const session_data& session_data) : _done(false), _begin(*this), _end(*this, true) {
+      _session_data = session_data;
+    }
 
     test_queue() : _done(false), _begin(*this), _end(*this, true) {
     }
@@ -2141,8 +2147,8 @@ public:
         data.data_source = data_source::random;
         
         data.properties["length"] = std::to_string(_length);
-        data.properties["duplicates"] = std::to_string(_duplicates);
-        data.properties["adaptive"] = std::to_string(_adaptive);
+        data.properties["duplicates"] = _duplicates ? "true" : "false";
+        data.properties["adaptive"] = _adaptive ? "true" : "false";
 
         return data;
     }
@@ -2287,13 +2293,11 @@ public:
         data.model = model;
         data.method_name = method;
         data.connection.generator_address = _genserver;
-
+        data.connection.request_type = "requestData";
 
         std::cerr << data << "\n----------\n";
         
-        std::map<std::string, std::any> opt = _setup(options, _setup_random(options), data_source::random, false);
-
-        return _generate(method, opt);
+        return _generate(data);
     }
 
     std::shared_ptr<test_queue<std::string>> export_cartesian(const std::string& method, ecfeed::params_cartesian options = ecfeed::params_cartesian()) {
@@ -2500,38 +2504,38 @@ private:
         return result;
     }
 
-    //     std::shared_ptr<test_queue<test_arguments>> _generate(session_data& data) {
-    //     auto url = _build_generate_url(data);
+        std::shared_ptr<test_queue<test_arguments>> _generate(session_data& data) {
+        auto url = _build_generate_url(data);
 
-    //     std::vector<std::string> types;
-    //     std::shared_ptr<test_queue<test_arguments>> result(new test_queue<test_arguments>());
+        std::vector<std::string> types;
+        std::shared_ptr<test_queue<test_arguments>> result(new test_queue<test_arguments>(data));
 
-    //     std::function<size_t(void *data, size_t size, size_t nmemb)> data_cb = [this, result](void *data, size_t size, size_t nmemb) -> size_t {
+        std::function<size_t(void *data, size_t size, size_t nmemb)> data_cb = [this, result](void *data, size_t size, size_t nmemb) -> size_t {
 
-    //         if (nmemb > 0) {
-    //             std::string test((char*) data, (char*) data + nmemb - 1);
+            if (nmemb > 0) {
+                std::string test((char*) data, (char*) data + nmemb - 1);
 
-    //             auto [name, value] = _parse_test_line(test);
-    //             if (name == "info" && value.to_str() != "alive" && !result->_get_method_info_ready()) {
-    //                 _parse_method_header(value.to_str(), result->_get_session_data());
-    //                 std::cerr << result->_get_session_data();
-    //             } else if (name == "testCase" && result->_get_method_info_ready()) {
-    //                 result->insert(_parse_test_case(value, result->_get_session_data()));
-    //             }
+                auto [name, value] = _parse_test_line(test);
+                if (name == "info" && value.to_str() != "alive" && !result->_get_method_info_ready()) {
+                    _parse_method_header(value.to_str(), result->_get_session_data());
+                    std::cerr << result->_get_session_data();
+                } else if (name == "testCase" && result->_get_method_info_ready()) {
+                    result->insert(_parse_test_case(value, result->_get_session_data()));
+                }
 
-    //         }
+            }
 
-    //         return nmemb;
-    //     };
+            return nmemb;
+        };
 
-    //     _running_requests.push_back(std::async(std::launch::async, [result, url, data_cb, this]() {
+        _running_requests.push_back(std::async(std::launch::async, [result, url, data_cb, this]() {
 
-    //         _perform_request(url, &data_cb);
-    //         result->finish();
-    //     }));
+            _perform_request(url, &data_cb);
+            result->finish();
+        }));
 
-    //     return result;
-    // }
+        return result;
+    }
 
     void _dump_key_store() {
         std::FILE* pkey_file = fopen(_pkey_path.string().c_str(), "w");
@@ -2623,10 +2627,73 @@ private:
         return _build_request_url(method, "requestData", options);
     }
 
-    // std::string _build_generate_url(const session_data& data) {
+    std::string _build_generate_url(const session_data& data) {
+        std::string url;
 
-    //     return _build_request_url(method, "requestData", options);
-    // }
+        url += "https://" + data.connection.generator_address + "/testCaseService";
+        url += "?requestType=" + data.connection.request_type;
+        url += "&client=cpp";
+        url += "&request={\"method\":\"" + data.method_name + "\"";
+        url += ",\"model\":\"" + data.model + "\"";
+
+        auto element = data.main.find("template");
+        if (element != data.main.end()) {
+          url += ",\"template\":\"" + template_type_url_param(std::any_cast<ecfeed::template_type>(element->second)) + "\"";
+        } else if (data.connection.request_type == "requestExport") {
+          url += ",\"template\":\"CSV\"";
+        }
+
+        url += ",\"userData\":\"{";
+
+        url += "'dataSource':'" + data_source_url_param(data.data_source)+ "',";
+
+        auto choices = data.main.find("choices");
+        if (choices != data.main.end()) {
+          std::pair<std::string, std::any> element("choices", choices->second);
+          url += _serializer.serialize(element) + ",";
+        }
+
+        auto constraints = data.main.find("constraints");
+        if (constraints != data.main.end()) {
+          std::pair<std::string, std::any> element("constraints", constraints->second);
+          url += _serializer.serialize(element) + ",";
+        }
+
+        auto test_suites = data.main.find("test_suites");
+        if (test_suites != data.main.end()) {
+          std::pair<std::string, std::any> element("test_suites", test_suites->second);
+          url += _serializer.serialize(element) + ",";
+        }
+
+        url += "'properties':{";
+
+        std::string padding = "";
+        for (auto const& x : data.properties) {
+            url += padding + "'" + x.first + "':'" + x.second + "'";
+            padding = ",";
+        }
+
+        url += "}}\"";
+
+        url += "}";
+
+        std::cout << "url:" << url << std::endl;
+        
+        try {
+            url = std::regex_replace(url, std::regex("\\\""), "%22");
+            url = std::regex_replace(url, std::regex("'"),  "%27");
+            url = std::regex_replace(url, std::regex("\\{"),  "%7B");
+            url = std::regex_replace(url, std::regex("\\}"),  "%7D");
+            url = std::regex_replace(url, std::regex("\\["),  "%5B");
+            url = std::regex_replace(url, std::regex("\\]"),  "%5D");
+        } catch (const std::regex_error& e) {
+            std::cerr << e.what() << std::endl;
+        }
+
+        // std::cout << "url:" << url << std::endl;
+
+        return url;
+    }
 
     std::string _build_request_url(const std::string& method, const std::string& request_type, std::map<std::string, std::any>& opt) {
         std::string url;
@@ -2664,6 +2731,8 @@ private:
 
         url += "}";
 
+        std::cout << "url:" << url << std::endl;
+        
         try {
             url = std::regex_replace(url, std::regex("\\\""), "%22");
             url = std::regex_replace(url, std::regex("'"),  "%27");
@@ -2675,7 +2744,7 @@ private:
             std::cerr << e.what() << std::endl;
         }
 
-        // std::cout << "url:" << url << std::endl;
+        std::cout << "url:" << url << std::endl;
 
         return url;
     }
