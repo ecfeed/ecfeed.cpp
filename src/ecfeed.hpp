@@ -1275,6 +1275,7 @@ struct session_data_feedback {
   int test_cases_total = 0;
   int test_cases_parsed = 0;
   bool transmission_finished = false;
+  std::map<std::string, std::any> test_results;
 };
 
 struct session_data_connection {
@@ -1500,8 +1501,16 @@ std::ostream& operator<<(std::ostream& os, const session_data& data) {
     return os;
 }
 
+void _process_feedback(session_data& data) {
+
+  if (data.feedback.test_cases_parsed == data.feedback.test_cases_total && data.feedback.transmission_finished) {
+      std::cerr << "finito" << std::endl;
+      std::cerr << data;
+    }
+}
+
 class test_handle {
-  const session_data& _session_data;
+  session_data& _session_data;
   std::string _data;
   std::string _id;
   bool _pending = true;
@@ -1512,9 +1521,41 @@ class test_handle {
 
   friend std::ostream& operator<<(std::ostream& os, const test_handle& test_handle);
 
+  void _process() { 
+    this->_session_data.feedback.test_cases_parsed++;
+    this->_session_data.feedback.test_results[this->_id] = this;
+    this->_pending = false;
+
+    _process_feedback(this->_session_data);
+  }
+
 public:
 
-  test_handle(const session_data& session_data, std::string data, std::string id) : _session_data(session_data), _data(data), _id(id) {
+  test_handle(session_data& session_data, std::string data, std::string id) : _session_data(session_data), _data(data), _id(id) {
+  }
+
+  std::string add_feedback(bool status, int duration = -1, std::string comment = "", std::map<std::string, std::string> custom = std::map<std::string, std::string>()) {
+    
+    if (this->_pending) {
+      this->_status = status ? "P" : "F";
+      this->_duration = duration;
+      this->_comment = comment;
+      this->_custom = custom;
+
+      _process();
+    }
+    
+    return comment != "" ? comment : "feedback";
+  }
+
+  std::string add_feedback(bool status, int duration, std::map<std::string, std::string> custom) {
+
+    return add_feedback(status, duration, "", custom);
+  }
+
+  std::string add_feedback(bool status, std::string comment, std::map<std::string, std::string> custom) {
+
+    return add_feedback(status, -1, comment, custom);
   }
 };
 
@@ -1669,7 +1710,7 @@ private:
 struct argument {
     std::string name;
     std::string type;
-    std::string value;
+    std::any value;
 };
 
 class test_arguments {
@@ -1677,7 +1718,7 @@ class test_arguments {
 
 public:
 
-    void add(std::string name, std::string type, std::string value) {
+    void add(std::string name, std::string type, std::any value) {
 
         argument element;
 
@@ -1691,6 +1732,11 @@ public:
     std::vector<argument> get_vector() const {
 
         return core;
+    }
+
+    ecfeed::test_handle get_handle() const {
+
+        return std::any_cast<ecfeed::test_handle>(core.back().value);
     }
 
     int get_size() const {
@@ -1780,21 +1826,29 @@ public:
 private:
 
     template<typename T>
-    T _parse(std::string type, std::string value) const {
-            
-        if (type == "String") return std::any_cast<T>(value);
-        else if (type == "char") return std::any_cast<T>(static_cast<char>(value.at(0)));
-        else if (type == "short") return std::any_cast<T>(static_cast<short>(std::stoi(value)));
-        else if (type == "byte") return std::any_cast<T>(std::stoi(value));
-        else if (type == "int") return std::any_cast<T>(std::stoi(value));
-        else if (type == "long") return std::any_cast<T>(std::stol(value));
-        else if (type == "float") return std::any_cast<T>(std::stof(value));
-        else if (type == "double") return std::any_cast<T>(std::stod(value));
-        else if (type == "boolean") return std::any_cast<T>(value == "true");
+    T _parse(std::string type, std::any value) const {
+
+      try {
+        if (type == "Handler") return std::any_cast<T>(value);
+
+        std::string parsed_value = std::any_cast<std::string>(value);
+
+        if (type == "String") return std::any_cast<T>(parsed_value);
+        else if (type == "char") return std::any_cast<T>(static_cast<char>(parsed_value.at(0)));
+        else if (type == "short") return std::any_cast<T>(static_cast<short>(std::stoi(parsed_value)));
+        else if (type == "byte") return std::any_cast<T>(std::stoi(parsed_value));
+        else if (type == "int") return std::any_cast<T>(std::stoi(parsed_value));
+        else if (type == "long") return std::any_cast<T>(std::stol(parsed_value));
+        else if (type == "float") return std::any_cast<T>(std::stof(parsed_value));
+        else if (type == "double") return std::any_cast<T>(std::stod(parsed_value));
+        else if (type == "boolean") return std::any_cast<T>(parsed_value == "true");
         else {
-            std::cerr << "Unknown parameter type: " << type << ". Converting the parameter to String\n";
-            return std::any_cast<T>(value);
+          std::cerr << "Unknown parameter type: " << parsed_value << ". Converting the parameter to String\n";
+          return std::any_cast<T>(parsed_value);
         }
+      } catch (std::exception e) {
+        std::cerr << "Unknown/Unparseable parameter type.\n" << std::endl; 
+      }
     }
 };
 
@@ -1921,7 +1975,7 @@ public:
         _cv.notify_one();
 
         _session_data.feedback.transmission_finished = true;
-        std::cerr << _session_data;
+        _process_feedback(_session_data);
     }
 
     bool empty() {
@@ -2734,8 +2788,8 @@ private:
                 arg_index++;
             }
 
-            test_handle handle(session_data, test.serialize(), "0:" + std::to_string(session_data.feedback.test_cases_parsed++)); 
-            std::cerr << handle;
+            test_handle handle(session_data, test.serialize(), "0:" + std::to_string(session_data.feedback.test_cases_total)); 
+            result.add("Feedback", "Handler", handle);
         }
 
         if (! test.is<picojson::array>()) {
@@ -2773,9 +2827,13 @@ private:
 
 inline std::ostream& operator<<(std::ostream& os, const argument& argument) {
 
-    os << argument.type << " " << argument.name << " = " << argument.value << "; ";
-
-    return os;
+  try {
+    os << argument.type << " " << argument.name << " = " << std::any_cast<std::string>(argument.value) << "; ";
+  } catch (std::exception e) {
+    os << std::endl << std::any_cast<ecfeed::test_handle>(argument.value) << ";";
+  }
+    
+  return os;
 }
 
 inline std::ostream& operator<<(std::ostream& os, const test_arguments& test_arguments) {
