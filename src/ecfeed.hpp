@@ -1222,6 +1222,8 @@ inline std::ostream &operator<<(std::ostream &os, const picojson::value &x) {
 
 namespace ecfeed {
 
+
+
 enum class template_type {
     csv = 1,
     xml = 2,
@@ -1309,205 +1311,7 @@ struct session_data {
   friend std::ostream& operator<<(std::ostream& os, const session_data& data);
 };
 
-std::string _get_properties_parameter(const session_data& data, std::string parameter) {
-  auto result = data.properties.find(parameter);
-
-  if (result == data.properties.end()) {
-    return "    " + parameter + ": -"; 
-  } else {
-    return "    " + parameter + ": " + result->second;
-  }
-}
-
-std::string _show_properties(const session_data& data) {
-  
-  return "Properties: \n" +
-    _get_properties_parameter(data, "n") + "\n" +
-    _get_properties_parameter(data, "coverage") + "\n" +
-    _get_properties_parameter(data, "length") + "\n" +
-    _get_properties_parameter(data, "duplicates") + "\n" +
-    _get_properties_parameter(data, "adaptive") + "\n";
-}
-
-std::string _show_feedback(const session_data& data) {
-  
-  return std::string("Feedback: \n") +
-    "    test cases total: " + std::to_string(data.feedback.test_cases_total) + "\n" +
-    "    test cases parsed: " + std::to_string(data.feedback.test_cases_parsed) + "\n" +
-    "    transmission: " + (data.feedback.transmission_finished ? "finished" : "pending") + "\n";
-}
-
-std::string _show_internal(const session_data& data) {
-
-  auto results = std::string("Internal: \n") +
-    "    framework: " + data.internal.framework + "\n" +
-    "    qualified method name: " + (data.internal.method_name_qualified == "" ? "-" : data.internal.method_name_qualified) + "\n" +
-    "    test session id: " + (data.internal.test_session_id == "" ? "-" : data.internal.test_session_id) + "\n" +
-    "    timestamp: " + (data.internal.timestamp == "" ? "-" : data.internal.timestamp) + "\n" +
-    "    method header parsed: " +  (data.internal.method_info_ready  ? "yes" : "no") + "\n";
-
-  results += "    method argument names: ["; 
-  for (auto i: data.internal.arg_names) { 
-    results += " " + i; 
-  }
-  results += " ]\n";
-
-  results += "    method argument types: ["; 
-  for (auto i: data.internal.arg_types) { 
-    results += " " + i; 
-  }
-  results += " ]\n";
-
-  return results;
-}
-
-std::string _get_main_label(const session_data& data) {
-  auto element = data.main.find("label");
-  std::string result = "    label: ";
-  
-  result += (element == data.main.end()) ? "-" : std::any_cast<std::string>(element->second);
-
-  return result + "\n";
-}
-
-std::string _get_main_template(const session_data& data) {
-  auto element = data.main.find("template");
-  std::string result = "    template: ";
-  
-  result += (element == data.main.end()) ? "-" : template_type_url_param(std::any_cast<ecfeed::template_type>(element->second));
-
-  return result + "\n";
-}
-
-std::string _get_main_custom(const session_data& data) {
-  auto element = data.main.find("custom");
-  std::string result = "    custom: ";
-
-  if (element == data.main.end()) {
-    return result + "-\n";
-  } else {
-    
-    result += "[ ";
-    for (auto const& x : std::any_cast<std::map<std::string, std::string>>(element->second)) {
-      result += "{ " + x.first + " : " + x.second + " } ";
-    }
-
-    return result + "]\n";
-  }
-}
-
-std::string _get_main_constraints(const session_data& data) {
-  auto element = data.main.find("constraints");
-  std::string result = "    constraints: ";
-
-  if (element == data.main.end()) {
-    return result += "-\n";
-  }
-
-  try {
-    result += std::any_cast<std::string>(element->second) + "\n";
-  } catch(std::bad_any_cast) {
-
-    result += "[ ";
-    for (auto const& x : std::any_cast<std::set<std::string>>(element->second)) {
-      result +=  x + " ";
-    }
-
-  }
-
-  return result + "]\n";
-}
-
-std::string _get_main_test_suites(const session_data& data) {
-  auto element = data.main.find("test_suites");
-  std::string result = "    test suites: ";
-
-  if (element == data.main.end()) {
-    return result += "-\n";
-  }
-
-  try {
-    result += std::any_cast<std::string>(element->second) + "\n";
-  } catch(std::bad_any_cast) {
-
-    result += "[ ";
-    for (auto const& x : std::any_cast<std::set<std::string>>(element->second)) {
-      result +=  x + " ";
-    }
-
-  }
-
-  return result + "]\n";
-}
-
-std::string _get_main_choices(const session_data& data) {
-  auto element = data.main.find("choices");
-  std::string result = "    choices: ";
-
-  if (element == data.main.end()) {
-    return result += "-\n";
-  }
-
-  try {
-    result += std::any_cast<std::string>(element->second) + "\n";
-  } catch (std::bad_any_cast) {
-
-    result += "[";
-    for (auto const& x : std::any_cast<std::map<std::string, std::set<std::string>>>(element->second)) {
-     
-      result +=  " " + x.first + " {";
-      for (auto const& y : x.second) {
-        result +=  y + " "; 
-      }
-
-      result += "}";
-    }
-
-  }
-
-  return result + " ]\n";
-}
-
-std::string _show_main(const session_data& data) {
-
-  auto results = std::string("Main: \n") +
-    "    model: " + data.model + "\n" +
-    "    method: " + data.method_name + "\n" +
-    _get_main_label(data) + 
-    _get_main_template(data) +
-    "    algorithm: " + data_source_url_param(data.data_source) + "\n" +
-    _get_main_custom(data) +
-    _get_main_constraints(data) +
-    _get_main_test_suites(data) +
-    _get_main_choices(data);
-
-  return results;
-}
-
-std::string _show_connection(const session_data& data) {
-  
-  return std::string("Connection: \n") +
-    "    generator address: " + data.connection.generator_address + "\n" +
-    "    request type: " + data.connection.request_type + "\n";
-}
-
-std::ostream& operator<<(std::ostream& os, const session_data& data) {
-    os << _show_main(data);
-    os << _show_properties(data);
-    os << _show_internal(data);
-    os << _show_feedback(data);
-    os << _show_connection(data);
-
-    return os;
-}
-
-void _process_feedback(session_data& data) {
-
-  if (data.feedback.test_cases_parsed == data.feedback.test_cases_total && data.feedback.transmission_finished) {
-      std::cerr << "finito" << std::endl;
-      std::cerr << data;
-    }
-}
+void _process_feedback(session_data& session_data);
 
 class test_handle {
   session_data& _session_data;
@@ -1558,30 +1362,6 @@ public:
     return add_feedback(status, -1, comment, custom);
   }
 };
-
-std::ostream& operator<<(std::ostream& os, const test_handle& test_handle) {
-    os << "Handler:" << std::endl;
-    os << "    processed: " << (test_handle._pending ? "false" : "true") << std::endl;
-    os << "    data: " << test_handle._data << std::endl;
-    os << "    id: " << test_handle._id << std::endl;
-    os << "    status: " << (test_handle._status != "" ? test_handle._status : "-") << std::endl;
-    os << "    duration: " << (test_handle._duration > 0 ? std::to_string(test_handle._duration) + "[ms]" : "-") << std::endl; 
-    os << "    comment: " << (test_handle._comment != "" ? test_handle._comment : "-") << std::endl;
-
-    if (test_handle._custom.size() == 0) {
-      os << "    custom: -" << std::endl;
-    } else {
-    
-      os << "[ ";
-      for (auto const& x : test_handle._custom) {
-        os << "{ " + x.first + " : " + x.second + " } ";
-      }
-
-      os << "]" << std::endl;
-    }
-
-    return os;
-}
 
 class serializer {
     std::unordered_map<std::type_index, std::function<std::string(const std::any&)>> _serializers;
@@ -1710,16 +1490,21 @@ private:
 struct argument {
     std::string name;
     std::string type;
-    std::any value;
+    std::string value;
 };
 
 class test_arguments {
     std::vector<argument> core;
+    ecfeed::test_handle* handle;
+
+    friend std::ostream& operator<<(std::ostream& os, const test_arguments& test_arguments);
 
 public:
 
-    void add(std::string name, std::string type, std::any value) {
+    test_arguments(ecfeed::test_handle* test_handle) : handle(test_handle) {
+    }
 
+    void add(std::string name, std::string type, std::string value) {
         argument element;
 
         element.name = name;
@@ -1734,9 +1519,9 @@ public:
         return core;
     }
 
-    ecfeed::test_handle get_handle() const {
+    ecfeed::test_handle* get_handle() const {
 
-        return std::any_cast<ecfeed::test_handle>(core.back().value);
+        return handle;
     }
 
     int get_size() const {
@@ -1745,7 +1530,7 @@ public:
     }
 
     template<typename T>
-    T get(int index) const  {
+    T get(int index) const {
         argument element = core.at(index);
 
         return _parse<T>(element.type, element.value);
@@ -1826,28 +1611,20 @@ public:
 private:
 
     template<typename T>
-    T _parse(std::string type, std::any value) const {
+    T _parse(std::string type, std::string value) const {
 
-      try {
-        if (type == "Handler") return std::any_cast<T>(value);
-
-        std::string parsed_value = std::any_cast<std::string>(value);
-
-        if (type == "String") return std::any_cast<T>(parsed_value);
-        else if (type == "char") return std::any_cast<T>(static_cast<char>(parsed_value.at(0)));
-        else if (type == "short") return std::any_cast<T>(static_cast<short>(std::stoi(parsed_value)));
-        else if (type == "byte") return std::any_cast<T>(std::stoi(parsed_value));
-        else if (type == "int") return std::any_cast<T>(std::stoi(parsed_value));
-        else if (type == "long") return std::any_cast<T>(std::stol(parsed_value));
-        else if (type == "float") return std::any_cast<T>(std::stof(parsed_value));
-        else if (type == "double") return std::any_cast<T>(std::stod(parsed_value));
-        else if (type == "boolean") return std::any_cast<T>(parsed_value == "true");
-        else {
-          std::cerr << "Unknown parameter type: " << parsed_value << ". Converting the parameter to String\n";
-          return std::any_cast<T>(parsed_value);
-        }
-      } catch (std::exception e) {
-        std::cerr << "Unknown/Unparseable parameter type.\n" << std::endl; 
+      if (type == "String") return std::any_cast<T>(value);
+      else if (type == "char") return std::any_cast<T>(static_cast<char>(value.at(0)));
+      else if (type == "short") return std::any_cast<T>(static_cast<short>(std::stoi(value)));
+      else if (type == "byte") return std::any_cast<T>(std::stoi(value));
+      else if (type == "int") return std::any_cast<T>(std::stoi(value));
+      else if (type == "long") return std::any_cast<T>(std::stol(value));
+      else if (type == "float") return std::any_cast<T>(std::stof(value));
+      else if (type == "double") return std::any_cast<T>(std::stod(value));
+      else if (type == "boolean") return std::any_cast<T>(value == "true");
+      else {
+        std::cerr << "Unknown parameter type: " << value << ". Converting the parameter to String\n";
+        return std::any_cast<T>(value);
       }
     }
 };
@@ -2770,8 +2547,9 @@ private:
     }
 
     test_arguments _parse_test_case(picojson::value test, session_data& session_data) {
-        test_arguments result;
-
+        test_handle* _test_handle = new test_handle(session_data, test.serialize(), "0:" + std::to_string(session_data.feedback.test_cases_total)); 
+        test_arguments _test_arguments(_test_handle);
+        
         if (test.is<picojson::array>()) {
             auto test_array = test.get<picojson::array>();
             unsigned arg_index = 0;
@@ -2780,7 +2558,7 @@ private:
                     
                 try {                    
                     std::string value = element.get<picojson::object>()["value"].to_str();
-                    result.add(session_data.internal.arg_names[arg_index], session_data.internal.arg_types[arg_index], value);
+                    _test_arguments.add(session_data.internal.arg_names[arg_index], session_data.internal.arg_types[arg_index], value);
                 } catch(const std::exception& e) {
                     std::cerr << "Exception caught: " << e.what() << ". Too many parameters in the test: " << test.to_str() << std::endl;
                 }
@@ -2788,15 +2566,13 @@ private:
                 arg_index++;
             }
 
-            test_handle handle(session_data, test.serialize(), "0:" + std::to_string(session_data.feedback.test_cases_total)); 
-            result.add("Feedback", "Handler", handle);
         }
 
         if (! test.is<picojson::array>()) {
             std::cerr << "Error: test case should be a JSON array" << std::endl;
         }
 
-        return result;
+        return _test_arguments;
     }
 
     std::tuple<std::string, picojson::value> _parse_test_line(std::string line) {
@@ -2825,13 +2601,251 @@ private:
     }
 };
 
-inline std::ostream& operator<<(std::ostream& os, const argument& argument) {
+ void _process_feedback(session_data& session_data) {
+
+    if (session_data.feedback.test_cases_parsed == session_data.feedback.test_cases_total && session_data.feedback.transmission_finished) {
+      std::cerr << "finito" << std::endl;
+      std::cerr << session_data;
+
+      for (auto const& [key, val] : session_data.feedback.test_results) { 
+        auto index = std::any_cast<ecfeed::test_handle*>(val);
+        delete index;
+        index = nullptr;
+        }
+    }
+  }
+
+inline std::ostream& operator<<(std::ostream& os, const test_handle& test_handle) {
+    os << "Handler:" << std::endl;
+    os << "    processed: " << (test_handle._pending ? "false" : "true") << std::endl;
+    os << "    data: " << test_handle._data << std::endl;
+    os << "    id: " << test_handle._id << std::endl;
+    os << "    status: " << (test_handle._status != "" ? test_handle._status : "-") << std::endl;
+    os << "    duration: " << (test_handle._duration > 0 ? std::to_string(test_handle._duration) + "[ms]" : "-") << std::endl; 
+    os << "    comment: " << (test_handle._comment != "" ? test_handle._comment : "-") << std::endl;
+
+    if (test_handle._custom.size() == 0) {
+      os << "    custom: -" << std::endl;
+    } else {
+    
+      os << "[ ";
+      for (auto const& x : test_handle._custom) {
+        os << "{ " + x.first + " : " + x.second + " } ";
+      }
+
+      os << "]" << std::endl;
+    }
+
+    return os;
+}
+
+inline std::string _get_properties_parameter(const session_data& session_data, std::string parameter) {
+  auto result = session_data.properties.find(parameter);
+
+  if (result == session_data.properties.end()) {
+    return "    " + parameter + ": -"; 
+  } else {
+    return "    " + parameter + ": " + result->second;
+  }
+}
+
+inline std::string _show_properties(const session_data& session_data) {
+  
+  return "Properties: \n" +
+    _get_properties_parameter(session_data, "n") + "\n" +
+    _get_properties_parameter(session_data, "coverage") + "\n" +
+    _get_properties_parameter(session_data, "length") + "\n" +
+    _get_properties_parameter(session_data, "duplicates") + "\n" +
+    _get_properties_parameter(session_data, "adaptive") + "\n";
+}
+
+inline std::string _show_feedback(const session_data& session_data) {
+  
+  auto results =  std::string("Feedback: \n") +
+    "    test cases total: " + std::to_string(session_data.feedback.test_cases_total) + "\n" +
+    "    test cases parsed: " + std::to_string(session_data.feedback.test_cases_parsed) + "\n" +
+    "    transmission: " + (session_data.feedback.transmission_finished ? "finished" : "pending") + "\n" +
+    "    handlers: " + std::to_string(session_data.feedback.test_results.size()) + "\n";
+
+    for (auto const& [key, val] : session_data.feedback.test_results) { 
+      results += key + " - "; 
+
+      std::ostringstream ss;
+      ss << *(std::any_cast<ecfeed::test_handle*>(val));
+
+      results += ss.str();
+    }
+
+    return results;
+}
+
+inline std::string _show_internal(const session_data& session_data) {
+
+  auto results = std::string("Internal: \n") +
+    "    framework: " + session_data.internal.framework + "\n" +
+    "    qualified method name: " + (session_data.internal.method_name_qualified == "" ? "-" : session_data.internal.method_name_qualified) + "\n" +
+    "    test session id: " + (session_data.internal.test_session_id == "" ? "-" : session_data.internal.test_session_id) + "\n" +
+    "    timestamp: " + (session_data.internal.timestamp == "" ? "-" : session_data.internal.timestamp) + "\n" +
+    "    method header parsed: " +  (session_data.internal.method_info_ready  ? "yes" : "no") + "\n";
+
+  results += "    method argument names: ["; 
+  for (auto i: session_data.internal.arg_names) { 
+    results += " " + i; 
+  }
+  results += " ]\n";
+
+  results += "    method argument types: ["; 
+  for (auto i: session_data.internal.arg_types) { 
+    results += " " + i; 
+  }
+  results += " ]\n";
+
+  return results;
+}
+
+inline std::string _get_main_label(const session_data& session_data) {
+  auto element = session_data.main.find("label");
+  std::string result = "    label: ";
+  
+  result += (element == session_data.main.end()) ? "-" : std::any_cast<std::string>(element->second);
+
+  return result + "\n";
+}
+
+inline std::string _get_main_template(const session_data& session_data) {
+  auto element = session_data.main.find("template");
+  std::string result = "    template: ";
+  
+  result += (element == session_data.main.end()) ? "-" : template_type_url_param(std::any_cast<ecfeed::template_type>(element->second));
+
+  return result + "\n";
+}
+
+inline std::string _get_main_custom(const session_data& session_data) {
+  auto element = session_data.main.find("custom");
+  std::string result = "    custom: ";
+
+  if (element == session_data.main.end()) {
+    return result + "-\n";
+  } else {
+    
+    result += "[ ";
+    for (auto const& x : std::any_cast<std::map<std::string, std::string>>(element->second)) {
+      result += "{ " + x.first + " : " + x.second + " } ";
+    }
+
+    return result + "]\n";
+  }
+}
+
+inline std::string _get_main_constraints(const session_data& session_data) {
+  auto element = session_data.main.find("constraints");
+  std::string result = "    constraints: ";
+
+  if (element == session_data.main.end()) {
+    return result += "-\n";
+  }
 
   try {
-    os << argument.type << " " << argument.name << " = " << std::any_cast<std::string>(argument.value) << "; ";
-  } catch (std::exception e) {
-    os << std::endl << std::any_cast<ecfeed::test_handle>(argument.value) << ";";
+    result += std::any_cast<std::string>(element->second) + "\n";
+  } catch(std::bad_any_cast) {
+
+    result += "[ ";
+    for (auto const& x : std::any_cast<std::set<std::string>>(element->second)) {
+      result +=  x + " ";
+    }
+
   }
+
+  return result + "]\n";
+}
+
+inline std::string _get_main_test_suites(const session_data& session_data) {
+  auto element = session_data.main.find("test_suites");
+  std::string result = "    test suites: ";
+
+  if (element == session_data.main.end()) {
+    return result += "-\n";
+  }
+
+  try {
+    result += std::any_cast<std::string>(element->second) + "\n";
+  } catch(std::bad_any_cast) {
+
+    result += "[ ";
+    for (auto const& x : std::any_cast<std::set<std::string>>(element->second)) {
+      result +=  x + " ";
+    }
+
+  }
+
+  return result + "]\n";
+}
+
+inline std::string _get_main_choices(const session_data& session_data) {
+  auto element = session_data.main.find("choices");
+  std::string result = "    choices: ";
+
+  if (element == session_data.main.end()) {
+    return result += "-\n";
+  }
+
+  try {
+    result += std::any_cast<std::string>(element->second) + "\n";
+  } catch (std::bad_any_cast) {
+
+    result += "[";
+    for (auto const& x : std::any_cast<std::map<std::string, std::set<std::string>>>(element->second)) {
+     
+      result +=  " " + x.first + " {";
+      for (auto const& y : x.second) {
+        result +=  y + " "; 
+      }
+
+      result += "}";
+    }
+
+  }
+
+  return result + " ]\n";
+}
+
+inline std::string _show_main(const session_data& session_data) {
+
+  auto results = std::string("Main: \n") +
+    "    model: " + session_data.model + "\n" +
+    "    method: " + session_data.method_name + "\n" +
+    _get_main_label(session_data) + 
+    _get_main_template(session_data) +
+    "    algorithm: " + data_source_url_param(session_data.data_source) + "\n" +
+    _get_main_custom(session_data) +
+    _get_main_constraints(session_data) +
+    _get_main_test_suites(session_data) +
+    _get_main_choices(session_data);
+
+  return results;
+}
+
+inline std::string _show_connection(const session_data& session_data) {
+  
+  return std::string("Connection: \n") +
+    "    generator address: " + session_data.connection.generator_address + "\n" +
+    "    request type: " + session_data.connection.request_type + "\n";
+}
+
+inline std::ostream& operator<<(std::ostream& os, const session_data& session_data) {
+    os << _show_main(session_data);
+    os << _show_properties(session_data);
+    os << _show_internal(session_data);
+    os << _show_connection(session_data);
+    os << _show_feedback(session_data);
+
+    return os;
+}
+
+inline std::ostream& operator<<(std::ostream& os, const argument& argument) {
+
+  os << argument.type << " " << argument.name << " = " << argument.value << "; ";
     
   return os;
 }
@@ -2840,9 +2854,11 @@ inline std::ostream& operator<<(std::ostream& os, const test_arguments& test_arg
         
     os << "size: " << test_arguments.get_size() << " | ";
 
-    for (auto &x : test_arguments.get_vector()) {
+    for (auto& x : test_arguments.get_vector()) {
         os << x;
     }
+
+    // os << std::endl << test_arguments.get_handle();
 
     return os;
 }
