@@ -1290,7 +1290,6 @@ struct session_data_internal {
   std::string method_name_qualified;
   std::string test_session_id;
   std::string timestamp;
-  std::any test_results;
   std::vector<std::string> arg_names;
   std::vector<std::string> arg_types;
   bool method_info_ready = false;
@@ -1324,7 +1323,8 @@ class test_handle {
   std::map<std::string, std::string> _custom;
 
   friend std::ostream& operator<<(std::ostream& os, const test_handle& test_handle);
-
+  friend picojson::object& _process_feedback_test_results(picojson::object& json, session_data& session_data);
+  
   void _process() { 
     this->_session_data.feedback.test_cases_parsed++;
     this->_session_data.feedback.test_results[this->_id] = this;
@@ -2497,6 +2497,74 @@ private:
         return url;
     }
 
+    // std::string _process_feedback_generate_url(const session_data& data) {
+    //     std::string url;
+
+    //     url += "https://" + data.connection.generator_address + "/testCaseService";
+    //     url += "?requestType=" + data.connection.request_type;
+    //     url += "&client=cpp";
+    //     url += "&request={\"method\":\"" + data.method_name + "\"";
+    //     url += ",\"model\":\"" + data.model + "\"";
+
+    //     auto element = data.main.find("template");
+    //     if (element != data.main.end()) {
+    //       url += ",\"template\":\"" + template_type_url_param(std::any_cast<ecfeed::template_type>(element->second)) + "\"";
+    //     } else if (data.connection.request_type == "requestExport") {
+    //       url += ",\"template\":\"CSV\"";
+    //     }
+
+    //     url += ",\"userData\":\"{";
+
+    //     url += "'dataSource':'" + data_source_url_param(data.data_source)+ "',";
+
+    //     auto choices = data.main.find("choices");
+    //     if (choices != data.main.end()) {
+    //       std::pair<std::string, std::any> element("choices", choices->second);
+    //       url += _serializer.serialize(element) + ",";
+    //     }
+
+    //     auto constraints = data.main.find("constraints");
+    //     if (constraints != data.main.end()) {
+    //       std::pair<std::string, std::any> element("constraints", constraints->second);
+    //       url += _serializer.serialize(element) + ",";
+    //     }
+
+    //     auto test_suites = data.main.find("test_suites");
+    //     if (test_suites != data.main.end()) {
+    //       std::pair<std::string, std::any> element("test_suites", test_suites->second);
+    //       url += _serializer.serialize(element) + ",";
+    //     }
+
+    //     url += "'properties':{";
+
+    //     std::string padding = "";
+    //     for (auto const& x : data.properties) {
+    //         url += padding + "'" + x.first + "':'" + x.second + "'";
+    //         padding = ",";
+    //     }
+
+    //     url += "}}\"";
+
+    //     url += "}";
+
+    //     std::cout << "url:" << url << std::endl;
+        
+    //     try {
+    //         url = std::regex_replace(url, std::regex("\\\""), "%22");
+    //         url = std::regex_replace(url, std::regex("'"),  "%27");
+    //         url = std::regex_replace(url, std::regex("\\{"),  "%7B");
+    //         url = std::regex_replace(url, std::regex("\\}"),  "%7D");
+    //         url = std::regex_replace(url, std::regex("\\["),  "%5B");
+    //         url = std::regex_replace(url, std::regex("\\]"),  "%5D");
+    //     } catch (const std::regex_error& e) {
+    //         std::cerr << e.what() << std::endl;
+    //     }
+
+    //     // std::cout << "url:" << url << std::endl;
+
+    //     return url;
+    // }
+
     void _parse_method_header(std::string line, session_data& session_data) {
       std::replace(line.begin(), line.end(), '\'', '\"');
 
@@ -2601,19 +2669,190 @@ private:
     }
 };
 
- void _process_feedback(session_data& session_data) {
+picojson::object& _process_feedback_gen_options(picojson::object& json, session_data& session_data) {
+  std::string body = "";
 
-    if (session_data.feedback.test_cases_parsed == session_data.feedback.test_cases_total && session_data.feedback.transmission_finished) {
-      std::cerr << "finito" << std::endl;
-      std::cerr << session_data;
+  std::string delimeter = "";
+  for (auto const& [key, val] : session_data.properties) { 
+    body += delimeter + key + "=" + val;
+    delimeter = ", ";
+  }
 
-      for (auto const& [key, val] : session_data.feedback.test_results) { 
-        auto index = std::any_cast<ecfeed::test_handle*>(val);
-        delete index;
-        index = nullptr;
-        }
+  json["generatorOptions"] = picojson::value(body);
+
+  return json;
+}
+
+picojson::object& _process_feedback_test_results(picojson::object& json, session_data& session_data) {
+  picojson::object body;
+
+  for (auto const& [key, val] : session_data.feedback.test_results) { 
+    ecfeed::test_handle* test_handle = std::any_cast<ecfeed::test_handle*>(val);
+
+    picojson::object data;
+    data["testCase"] = picojson::value(test_handle->_data);
+
+    if (test_handle->_status != "") {
+      data["status"] = picojson::value(test_handle->_status);
+    }
+
+    if (test_handle->_comment != "") {
+      data["comment"] = picojson::value(test_handle->_comment);
+    }
+
+    if ((test_handle->_duration) > 0) {
+      data["duration"] = picojson::value(static_cast<double>(test_handle->_duration));
+    }
+
+    if ((test_handle->_custom).size() > 0) {
+      picojson::object custom;
+
+      for (auto const& [key, val] : test_handle->_custom) { 
+        custom[key] = picojson::value(val);
+      }
+
+      data["custom"] = picojson::value(custom);
+    }
+
+    body[key] = picojson::value(data);
+  }
+
+  json["testResults"] = picojson::value(body);
+
+  return json;
+}
+
+picojson::object& _process_feedback_test_session_label(picojson::object& json, session_data& session_data) {
+  auto element = session_data.main.find("label");
+  
+  if (element != session_data.main.end()) {
+    json["testSessionLabel"] = picojson::value(std::any_cast<std::string>(element->second));
+  }
+
+  return json;
+}
+
+picojson::object& _process_feedback_constraints(picojson::object& json, session_data& session_data) {
+  auto element = session_data.main.find("constraints");
+  
+  if (element != session_data.main.end()) {
+    try {
+      json["constraints"] = picojson::value(std::any_cast<std::string>(element->second));
+    } catch(std::bad_any_cast) {
+      std::vector<picojson::value> parser;
+      
+      for (auto elem : std::any_cast<std::set<std::string>>(element->second)) {
+        parser.push_back(picojson::value(elem));
+      }
+      
+      json["constraints"] = picojson::value(parser);
     }
   }
+
+  return json;
+}
+
+picojson::object& _process_feedback_test_suites(picojson::object& json, session_data& session_data) {
+  auto element = session_data.main.find("test_suites");
+  
+  if (element != session_data.main.end()) {
+    try {
+      json["testSuites"] = picojson::value(std::any_cast<std::string>(element->second));
+    } catch(std::bad_any_cast) {
+      std::vector<picojson::value> parser;
+      
+      for (auto elem : std::any_cast<std::set<std::string>>(element->second)) {
+        parser.push_back(picojson::value(elem));
+      }
+      
+      json["testSuites"] = picojson::value(parser);
+    }
+  }
+
+  return json;
+}
+
+picojson::object& _process_feedback_custom(picojson::object& json, session_data& session_data) {
+  auto element = session_data.main.find("custom");
+  if (element != session_data.main.end()) {
+    auto element_map = std::any_cast<std::map<std::string, std::string>>(element->second);
+    
+    if (element_map.size() > 0) {
+      picojson::object parser;
+
+      for (auto const& [key, val] : element_map) { 
+        parser[key] = picojson::value(val);
+      }
+
+      json["custom"] = picojson::value(parser);
+    }
+  }
+
+  return json;
+}
+
+picojson::object& _process_feedback_choices(picojson::object& json, session_data& session_data) {
+  auto element = session_data.main.find("choices");
+  
+  if (element != session_data.main.end()) {
+    try {
+      json["choices"] = picojson::value(std::any_cast<std::string>(element->second));
+    } catch(std::bad_any_cast) {
+      picojson::object parser;
+      
+      for (auto x : std::any_cast<std::map<std::string, std::set<std::string>>>(element->second)) {
+        std::vector<picojson::value> element;
+      
+        for (std::string y : x.second) {
+          element.push_back(picojson::value(y));
+        }
+        
+        parser[x.first] = picojson::value(element);
+      }
+      
+      json["choices"] = picojson::value(parser);
+    }
+  }
+
+  return json;
+}
+
+std::string _process_feedback_assemble_body(session_data& session_data) {
+  picojson::object body;
+
+  body["testSessionId"] = picojson::value(session_data.internal.test_session_id);
+  body["modelId"] = picojson::value(session_data.model);
+  body["methodInfo"] = picojson::value(session_data.internal.method_name_qualified);
+  body["framework"] = picojson::value(session_data.internal.framework);
+  body["timestamp"] = picojson::value(std::stod(session_data.internal.timestamp));
+  body["generatorType"] = picojson::value(data_source_url_param(session_data.data_source));
+  
+  _process_feedback_gen_options(body, session_data);
+  _process_feedback_test_session_label(body, session_data);
+  _process_feedback_constraints(body, session_data);
+  _process_feedback_test_suites(body, session_data);
+  _process_feedback_custom(body, session_data);
+  _process_feedback_choices(body, session_data);
+
+  _process_feedback_test_results(body, session_data);
+
+  return picojson::value(body).serialize();
+}
+
+void _process_feedback(session_data& session_data) {
+
+  if (session_data.feedback.test_cases_parsed == session_data.feedback.test_cases_total && session_data.feedback.transmission_finished) {
+    std::cerr << "finito" << std::endl;
+    // std::cerr << session_data;
+    std::cerr << _process_feedback_assemble_body(session_data);
+
+    for (auto const& [key, val] : session_data.feedback.test_results) { 
+      auto index = std::any_cast<ecfeed::test_handle*>(val);
+      delete index;
+      index = nullptr;
+    }
+  }
+}
 
 inline std::ostream& operator<<(std::ostream& os, const test_handle& test_handle) {
     os << "Handler:" << std::endl;
@@ -2857,8 +3096,6 @@ inline std::ostream& operator<<(std::ostream& os, const test_arguments& test_arg
     for (auto& x : test_arguments.get_vector()) {
         os << x;
     }
-
-    // os << std::endl << test_arguments.get_handle();
 
     return os;
 }
