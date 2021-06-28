@@ -1274,6 +1274,7 @@ static std::string data_source_url_param(const data_source& s) {
 }
 
 struct session_data_feedback {
+  bool process = false;
   int test_cases_total = 0;
   int test_cases_parsed = 0;
   bool transmission_finished = false;
@@ -1328,13 +1329,15 @@ struct session_data {
 
 class request {
   static std::string escape_url(const std::string& request);
+  static std::string generate_request_url_stream(const session_data& session_data);
   static std::string generate_request_url_stream_parameter(const session_data& session_data);
   static std::string generate_request_url_feedback(const session_data& session_data);
   static std::string generate_request_url_feedback_body(const session_data& session_data);
+  static size_t curl_data_callback(void *data, size_t size, size_t nmemb, void *userp);
 public:
-  static std::string generate_request_url_stream(const session_data& session_data);
   static void process_feedback(session_data& session_data);
   static void perform_request_feedback(const ecfeed::session_data& session_data);
+  static void perform_request_stream(const ecfeed::session_data& session_data, const std::function<size_t(void *data, size_t size, size_t nmemb)>* data_callback);
 };
 
 class parser {
@@ -1372,12 +1375,13 @@ class test_handle {
 
 public:
 
-  test_handle(session_data& session_data, std::string data, std::string id) : _session_data(session_data), _data(data), _id(id) {
+  test_handle(session_data& session_data, std::string data, std::string id) : _session_data(session_data), _id(id) {
+    this->_data = "{\"testCase\":" + data + "}";
   }
 
   std::string add_feedback(bool status, int duration = -1, std::string comment = "", std::map<std::string, std::string> custom = std::map<std::string, std::string>()) {
     
-    if (this->_pending) {
+    if (this->_session_data.feedback.process && this->_pending) {
       this->_status = status ? "P" : "F";
       this->_duration = duration;
       this->_comment = comment;
@@ -1731,6 +1735,7 @@ protected:
     std::map<std::string, std::string> _custom;
     std::any _constraints;
     std::any _choices;
+    bool _feedback;
 
 public:
 
@@ -1738,7 +1743,8 @@ public:
         _template_type(ecfeed::template_type::csv),
         _label(std::string("")), 
         _constraints(std::string("ALL")), 
-        _choices(std::string("ALL"))
+        _choices(std::string("ALL")),
+        _feedback(false)
     {}
 
     ecfeed::template_type& get_template_type()  {
@@ -1753,15 +1759,17 @@ public:
         return _custom;
     }
 
-    std::any& get_constraints()  {
+    std::any& get_constraints() {
         return _constraints;
     }
 
-    std::any& get_choices()  {
+    std::any& get_choices() {
         return _choices;
     }
 
-    
+    bool& get_feedback() {
+      return _feedback;
+    }
 
     virtual session_data get_session_data(const std::string& model, const std::string& method, const std::string& generator) {
         session_data data;
@@ -1769,6 +1777,7 @@ public:
         data.model = model;
         data.method_name = method;
         data.connection.generator_address = generator;
+        data.feedback.process = _feedback;
         
         data.main["template"] = _template_type;
         data.main["label"] = _label;
@@ -1820,8 +1829,12 @@ public:
         return self();
     }
 
-    virtual T& self() = 0;
+    T& feedback(bool feedback) {
+      _feedback = feedback;
+      return self();
+    }
 
+    virtual T& self() = 0;
 };
 
 class params_nwise : public params_common_setter<params_nwise> {
@@ -2183,12 +2196,6 @@ public:
         
 private:
 
-    static size_t _curl_data_callback(void *data, size_t size, size_t nmemb, void *userp) {
-        auto callback = static_cast<std::function<size_t(void *data, size_t size, size_t nmemb)>*>(userp);
-
-        return callback->operator()(data, size, nmemb);
-    }
-
     std::string _get_key_store(std::string keystore_path = "") {
 
         if (keystore_path == "") {
@@ -2205,31 +2212,7 @@ private:
         }
     }
 
-    void _perform_request(const std::string& url, const std::function<size_t(void *data, size_t size, size_t nmemb)>* data_callback) {
-        char error_buf[128];
-        curl_easy_setopt(_curl_handle, CURLOPT_SSLCERT, _cert_path.string().c_str());
-        curl_easy_setopt(_curl_handle, CURLOPT_SSLCERTTYPE, "pem");
-        curl_easy_setopt(_curl_handle, CURLOPT_SSLKEY, _pkey_path.string().c_str());
-        curl_easy_setopt(_curl_handle, CURLOPT_CAINFO, _ca_path.string().c_str());
-        curl_easy_setopt(_curl_handle, CURLOPT_BUFFERSIZE, 8);
-
-        curl_easy_setopt(_curl_handle, CURLOPT_WRITEFUNCTION, _curl_data_callback);
-        curl_easy_setopt(_curl_handle, CURLOPT_WRITEDATA, (void *)data_callback);
-
-        curl_easy_setopt(_curl_handle, CURLOPT_ERRORBUFFER, error_buf);
-
-        curl_easy_setopt(_curl_handle, CURLOPT_URL, url.c_str());
-
-        auto success = curl_easy_perform(_curl_handle);
-
-        if (success != 0) {
-            std::cout << error_buf << std::endl;
-        }
-
-    }
-
     std::shared_ptr<test_queue<std::string>> _export(session_data& data) {
-      auto url = request::generate_request_url_stream(data);
 
       std::shared_ptr<test_queue<std::string>> result(new test_queue<std::string>(data));
 
@@ -2243,8 +2226,8 @@ private:
         return nmemb;
       };
 
-      _running_requests.push_back(std::async(std::launch::async, [result, url, data_cb, this]() {
-        _perform_request(url, &data_cb);
+      _running_requests.push_back(std::async(std::launch::async, [data, result, data_cb, this]() {
+        request::perform_request_stream(data, &data_cb);
         result->finish();
       }));
 
@@ -2252,7 +2235,6 @@ private:
     }
 
     std::shared_ptr<test_queue<test_arguments>> _generate(session_data& session_data) {
-        auto url = request::generate_request_url_stream(session_data);
 
         std::vector<std::string> types;
         std::shared_ptr<test_queue<test_arguments>> result(new test_queue<test_arguments>(session_data));
@@ -2274,9 +2256,9 @@ private:
             return nmemb;
         };
 
-        _running_requests.push_back(std::async(std::launch::async, [result, url, data_cb, this]() {
+        _running_requests.push_back(std::async(std::launch::async, [session_data, result, data_cb, this]() {
 
-            _perform_request(url, &data_cb);
+            request::perform_request_stream(session_data, &data_cb);
             result->finish();
         }));
 
@@ -2351,9 +2333,7 @@ private:
         }
 
         return result;
-    }
-
-    
+    } 
 
     void _parse_method_header(std::string line, session_data& session_data) {
       std::replace(line.begin(), line.end(), '\'', '\"');
@@ -2572,6 +2552,12 @@ inline std::ostream& operator<<(std::ostream& os, const test_handle& test_handle
 
 //----------------------------------------------------------------------------------------------
 
+size_t request::curl_data_callback(void *data, size_t size, size_t nmemb, void *userp) {
+  auto callback = static_cast<std::function<size_t(void *data, size_t size, size_t nmemb)>*>(userp);
+
+  return callback->operator()(data, size, nmemb);
+}
+
 std::string request::generate_request_url_stream_parameter(const session_data& session_data) {
    picojson::object request;
 
@@ -2633,7 +2619,7 @@ std::string request::generate_request_url_stream(const session_data& session_dat
   url += "&client=cpp";
   url += "&request=" + request::generate_request_url_stream_parameter(session_data);
 
-  std::cerr << "url:" << url << std::endl;
+  // std::cerr << "url:" << url << std::endl;
 
   return request::escape_url(url);
 }
@@ -2645,7 +2631,7 @@ std::string request::generate_request_url_feedback(const session_data& session_d
   url += "?client=cpp";
   url += "&generationId=" + session_data.internal.test_session_id;
 
-  std::cerr << "url:" << url << std::endl;
+  // std::cerr << "url:" << url << std::endl;
         
   return request::escape_url(url);
 }
@@ -2675,9 +2661,6 @@ void request::process_feedback(session_data& session_data) {
 
   if (session_data.feedback.test_cases_parsed == session_data.feedback.test_cases_total && session_data.feedback.transmission_finished) {
     std::cerr << "finito" << std::endl;
-    std::cerr << session_data << std::endl << std::endl;
-    std::cerr << request::generate_request_url_feedback_body(session_data) << std::endl << std::endl;
-    std::cerr << request::generate_request_url_feedback(session_data);
 
     request::perform_request_feedback(session_data);
 
@@ -2695,6 +2678,12 @@ void request::perform_request_feedback(const ecfeed::session_data& session_data)
   std::string url = request::generate_request_url_feedback(session_data);
   std::string body = request::generate_request_url_feedback_body(session_data);
 
+  struct curl_slist *headers = NULL;
+  headers = curl_slist_append(headers, "Accept: application/json");
+  headers = curl_slist_append(headers, "Content-Type: application/json");
+  headers = curl_slist_append(headers, "Content-Type: application/json; charset=utf-8");
+  curl_easy_setopt(session_data.connection.curl_handle, CURLOPT_HTTPHEADER, headers); 
+
   curl_easy_setopt(session_data.connection.curl_handle, CURLOPT_SSLCERT, session_data.connection.cert_path.c_str());
   curl_easy_setopt(session_data.connection.curl_handle, CURLOPT_SSLCERTTYPE, "pem");
   curl_easy_setopt(session_data.connection.curl_handle, CURLOPT_SSLKEY, session_data.connection.pkey_path.c_str());
@@ -2704,8 +2693,34 @@ void request::perform_request_feedback(const ecfeed::session_data& session_data)
   curl_easy_setopt(session_data.connection.curl_handle, CURLOPT_ERRORBUFFER, error_buf);
 
   curl_easy_setopt(session_data.connection.curl_handle, CURLOPT_URL, url.c_str());
-  curl_easy_setopt(session_data.connection.curl_handle, CURLOPT_CUSTOMREQUEST, "PUT");
-  curl_easy_setopt(session_data.connection.curl_handle, CURLOPT_POSTFIELDS, body);
+  curl_easy_setopt(session_data.connection.curl_handle, CURLOPT_CUSTOMREQUEST, "POST");
+  curl_easy_setopt(session_data.connection.curl_handle, CURLOPT_POSTFIELDS, body.c_str());
+
+  auto success = curl_easy_perform(session_data.connection.curl_handle);
+
+  if (success != 0) {
+    std::cout << error_buf << std::endl;
+  }
+
+}
+
+void request::perform_request_stream(const ecfeed::session_data& session_data, const std::function<size_t(void *data, size_t size, size_t nmemb)>* data_callback) {
+  char error_buf[128];
+
+  std::string url = request::generate_request_url_stream(session_data);
+
+  curl_easy_setopt(session_data.connection.curl_handle, CURLOPT_SSLCERT, session_data.connection.cert_path.c_str());
+  curl_easy_setopt(session_data.connection.curl_handle, CURLOPT_SSLCERTTYPE, "pem");
+  curl_easy_setopt(session_data.connection.curl_handle, CURLOPT_SSLKEY, session_data.connection.pkey_path.c_str());
+  curl_easy_setopt(session_data.connection.curl_handle, CURLOPT_CAINFO, session_data.connection.ca_path.c_str());
+  curl_easy_setopt(session_data.connection.curl_handle, CURLOPT_BUFFERSIZE, 8);
+
+  curl_easy_setopt(session_data.connection.curl_handle, CURLOPT_WRITEFUNCTION, request::curl_data_callback);
+  curl_easy_setopt(session_data.connection.curl_handle, CURLOPT_WRITEDATA, (void *)data_callback);
+
+  curl_easy_setopt(session_data.connection.curl_handle, CURLOPT_ERRORBUFFER, error_buf);
+
+  curl_easy_setopt(session_data.connection.curl_handle, CURLOPT_URL, url.c_str());
 
   auto success = curl_easy_perform(session_data.connection.curl_handle);
 
@@ -2750,7 +2765,7 @@ std::optional<picojson::value> session_data::process_test_results() const {
 
     picojson::object data;
 
-    parser::append_json(data, "testCase", parser::process_string(test_handle->_data));
+    parser::append_json(data, "data", parser::process_string(test_handle->_data));
     parser::append_json(data, "status", parser::process_string(test_handle->_status));
     parser::append_json(data, "comment", parser::process_string(test_handle->_comment));
     parser::append_json(data, "duration", parser::process_number(test_handle->_duration));
