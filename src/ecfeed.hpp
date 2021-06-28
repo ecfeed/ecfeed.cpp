@@ -1322,6 +1322,8 @@ struct session_data {
   std::optional<picojson::value> process_choices() const;
   std::optional<picojson::value> process_template() const;
   std::optional<picojson::value> process_property(const std::string parameter) const;
+
+  void set_connection_details(const std::string& cert_path, const std::string& pkey_path, const std::string& ca_path, CURL* curl_handle);
 };
 
 class request {
@@ -1335,14 +1337,17 @@ public:
   static void perform_request_feedback(const ecfeed::session_data& session_data);
 };
 
-template<typename T> std::optional<picojson::value> _process_number(const T value);
-std::optional<picojson::value> _process_string(const std::string& value);
-std::optional<picojson::value> _process_set(const std::set<std::string>& value);
-std::optional<picojson::value> _process_vector(const std::vector<std::string>& value);
-std::optional<picojson::value> _process_map(const std::map<std::string, std::string>& value);
-
-std::string _append_string_debug(std::string appendix, std::optional<picojson::value> box);
-picojson::object& _append_json(picojson::object& json, std::string field, std::optional<picojson::value> box);
+class parser {
+public:
+  template<typename T> static std::optional<picojson::value> process_number(const T value);
+  static std::optional<picojson::value> process_string(const std::string& value);
+  static std::optional<picojson::value> process_set(const std::set<std::string>& value);
+  static std::optional<picojson::value> process_vector(const std::vector<std::string>& value);
+  static std::optional<picojson::value> process_map(const std::map<std::string, std::string>& value);
+  static std::string append_string_debug(std::string appendix, std::optional<picojson::value> box);
+  static std::string append_string_request(std::string key, std::optional<picojson::value> box);
+  static picojson::object& append_json(picojson::object& json, std::string field, std::optional<picojson::value> box);
+};
 
 class test_handle {
   session_data& _session_data;
@@ -1718,15 +1723,6 @@ private:
 
 };
 
-session_data& set_connection_details(session_data& session_data, const std::string& cert_path, const std::string& pkey_path, const std::string& ca_path, CURL* curl_handle) {
-  session_data.connection.cert_path = cert_path;
-  session_data.connection.pkey_path = pkey_path;
-  session_data.connection.ca_path = ca_path;
-  session_data.connection.curl_handle = curl_handle;
-
-  return session_data;
-}
-
 class params_common_getter {
 protected:
 
@@ -2089,7 +2085,7 @@ public:
         std::lock_guard<std::mutex> lock(_mutex);
 
         session_data data = options.get_session_data(model, method, _genserver);
-        set_connection_details(data, _cert_path.string(), _pkey_path.string(), _ca_path.string(), _curl_handle);
+        data.set_connection_details(_cert_path.string(), _pkey_path.string(), _ca_path.string(), _curl_handle);
         data.connection.request_type = "requestExport";
 
         return _export(data);
@@ -2099,7 +2095,7 @@ public:
         std::lock_guard<std::mutex> lock(_mutex);
 
         session_data data = options.get_session_data(model, method, _genserver);
-        set_connection_details(data, _cert_path.string(), _pkey_path.string(), _ca_path.string(), _curl_handle);
+        data.set_connection_details(_cert_path.string(), _pkey_path.string(), _ca_path.string(), _curl_handle);
         data.connection.request_type = "requestData";
         
         return _generate(data);
@@ -2109,7 +2105,7 @@ public:
         std::lock_guard<std::mutex> lock(_mutex);
 
         session_data data = options.get_session_data(model, method, _genserver);
-        set_connection_details(data, _cert_path.string(), _pkey_path.string(), _ca_path.string(), _curl_handle);
+        data.set_connection_details(_cert_path.string(), _pkey_path.string(), _ca_path.string(), _curl_handle);
         data.connection.request_type = "requestExport";
 
         return _export(data);
@@ -2119,7 +2115,7 @@ public:
         std::lock_guard<std::mutex> lock(_mutex);
 
         session_data data = options.get_session_data(model, method, _genserver);
-        set_connection_details(data, _cert_path.string(), _pkey_path.string(), _ca_path.string(), _curl_handle);
+        data.set_connection_details(_cert_path.string(), _pkey_path.string(), _ca_path.string(), _curl_handle);
         data.connection.request_type = "requestData";
         
         return _generate(data);
@@ -2129,7 +2125,7 @@ public:
         std::lock_guard<std::mutex> lock(_mutex);
 
         session_data data = options.get_session_data(model, method, _genserver);
-        set_connection_details(data, _cert_path.string(), _pkey_path.string(), _ca_path.string(), _curl_handle);
+        data.set_connection_details(_cert_path.string(), _pkey_path.string(), _ca_path.string(), _curl_handle);
         data.connection.request_type = "requestExport";
 
         return _export(data);
@@ -2139,7 +2135,7 @@ public:
         std::lock_guard<std::mutex> lock(_mutex);
 
         session_data data = options.get_session_data(model, method, _genserver);
-        set_connection_details(data, _cert_path.string(), _pkey_path.string(), _ca_path.string(), _curl_handle);
+        data.set_connection_details(_cert_path.string(), _pkey_path.string(), _ca_path.string(), _curl_handle);
         data.connection.request_type = "requestData";
         
         return _generate(data);
@@ -2149,7 +2145,7 @@ public:
         std::lock_guard<std::mutex> lock(_mutex);
 
         session_data data = options.get_session_data(model, method, _genserver);
-        set_connection_details(data, _cert_path.string(), _pkey_path.string(), _ca_path.string(), _curl_handle);
+        data.set_connection_details(_cert_path.string(), _pkey_path.string(), _ca_path.string(), _curl_handle);
         data.connection.request_type = "requestExport";
 
         return _export(data);
@@ -2159,7 +2155,7 @@ public:
         std::lock_guard<std::mutex> lock(_mutex);
 
         session_data data = options.get_session_data(model, method, _genserver);
-        set_connection_details(data, _cert_path.string(), _pkey_path.string(), _ca_path.string(), _curl_handle);
+        data.set_connection_details(_cert_path.string(), _pkey_path.string(), _ca_path.string(), _curl_handle);
         data.connection.request_type = "requestData";
         
         return _generate(data);
@@ -2169,7 +2165,7 @@ public:
         std::lock_guard<std::mutex> lock(_mutex);
 
         session_data data = options.get_session_data(model, method, _genserver);
-        set_connection_details(data, _cert_path.string(), _pkey_path.string(), _ca_path.string(), _curl_handle);
+        data.set_connection_details(_cert_path.string(), _pkey_path.string(), _ca_path.string(), _curl_handle);
         data.connection.request_type = "requestExport";
 
         return _export(data);
@@ -2179,7 +2175,7 @@ public:
         std::lock_guard<std::mutex> lock(_mutex);
 
         session_data data = options.get_session_data(model, method, _genserver);
-        set_connection_details(data, _cert_path.string(), _pkey_path.string(), _ca_path.string(), _curl_handle);
+        data.set_connection_details(_cert_path.string(), _pkey_path.string(), _ca_path.string(), _curl_handle);
         data.connection.request_type = "requestData";
         
         return _generate(data);
@@ -2463,134 +2459,23 @@ private:
     }
 };
 
-std::string _append_string_request(std::string key, std::optional<picojson::value> box) {
-
-  if (box) {
-    picojson::object body;
-    body[key] = box.value();
-    return picojson::value(body).serialize();
-  } else {
-    return "";
-  }
-}
-
-std::string _append_string_debug(std::string appendix, std::optional<picojson::value> box) {
-
-  if (box) {
-    return appendix + box.value().serialize() + "\n";
-  } else {
-    return appendix + "-\n";
-  }
-}
-
-picojson::object& _append_json(picojson::object& json, std::string field, std::optional<picojson::value> box) {
-  
-  if (box) {
-    json[field] = box.value();
-  }
-
-  return json;
-}
-
-template<typename T>
-std::optional<picojson::value> _process_number(const T value) {
-  std::optional<picojson::value> box;
-
-  if (value > 0) {
-    box = picojson::value(static_cast<double>(value));
-  }
-
-  return box;
-}
-
-std::optional<picojson::value> _process_string(const std::string& value) {
-  std::optional<picojson::value> box;
-
-  if (value != "") {
-    box = picojson::value(value);
-  }
-
-  return box;
-}
-
-std::optional<picojson::value> _process_set(const std::set<std::string>& value) {
-  std::optional<picojson::value> box;
-  std::vector<picojson::value> parser;
-      
-  if (value.size() > 0) {
-    
-    for (auto x : value) {
-      parser.push_back(picojson::value(x));
-    }
-  
-    box = picojson::value(parser);
-  }
-      
-  return box;
-}
-
-std::optional<picojson::value> _process_vector(const std::vector<std::string>& value) {
-  std::optional<picojson::value> box;
-  std::vector<picojson::value> parser;
-      
-  if (value.size() > 0) {
-    
-    for (auto x : value) {
-      parser.push_back(picojson::value(x));
-    }
-  
-    box = picojson::value(parser);
-  }
-      
-  return box;
-}
-
-std::optional<picojson::value> _process_map(const std::map<std::string, std::string>& value) {
-  std::optional<picojson::value> box;
-  
-  if (value.size() > 0) {
-    picojson::object parser;
-
-    for (auto const& [key, val] : value) { 
-      parser[key] = picojson::value(val);
-    }
-
-    box = picojson::value(parser);
-  }
-
-  return box;
-}
-
-inline std::ostream& operator<<(std::ostream& os, const test_handle& test_handle) {
-    os << "Handler:" << std::endl;
-    os << _append_string_debug("  - processed: ", _process_string(test_handle._pending ? "false" : "true"));
-    os << _append_string_debug("  - data: ", _process_string(test_handle._data));
-    os << _append_string_debug("  - id: ", _process_string(test_handle._id));
-    os << _append_string_debug("  - status: ", _process_string(test_handle._status));
-    os << _append_string_debug("  - duration: ", _process_number(test_handle._duration));
-    os << _append_string_debug("  - comment: ", _process_string(test_handle._comment));
-    os << _append_string_debug("  - custom: ", _process_map(test_handle._custom));
-
-    return os;
-}
-
-std::string _show_properties(const session_data& session_data) {
+inline std::string _show_properties(const session_data& session_data) {
   
   return "Properties: \n" +
-    _append_string_debug("  - n: ", session_data.process_property("n")) +
-    _append_string_debug("  - coverage: ", session_data.process_property("coverage")) +
-    _append_string_debug("  - length: ", session_data.process_property("length")) +
-    _append_string_debug("  - duplicates: ", session_data.process_property("duplicates")) +
-    _append_string_debug("  - adaptive: ", session_data.process_property("adaptive"));
+    parser::append_string_debug("  - n: ", session_data.process_property("n")) +
+    parser::append_string_debug("  - coverage: ", session_data.process_property("coverage")) +
+    parser::append_string_debug("  - length: ", session_data.process_property("length")) +
+    parser::append_string_debug("  - duplicates: ", session_data.process_property("duplicates")) +
+    parser::append_string_debug("  - adaptive: ", session_data.process_property("adaptive"));
 }
 
-std::string _show_feedback(const session_data& session_data) {
+inline std::string _show_feedback(const session_data& session_data) {
   
   auto results =  std::string("Feedback: \n") +
-    _append_string_debug("  - test cases total: ", _process_number(session_data.feedback.test_cases_total)) +
-    _append_string_debug("  - test cases parsed: ", _process_number(session_data.feedback.test_cases_parsed)) +
-    _append_string_debug("  - transmission: ", _process_string(session_data.feedback.transmission_finished ? "finished" : "pending")) +
-    _append_string_debug("  - handlers: ", _process_number(session_data.feedback.test_results.size()));
+    parser::append_string_debug("  - test cases total: ", parser::process_number(session_data.feedback.test_cases_total)) +
+    parser::append_string_debug("  - test cases parsed: ", parser::process_number(session_data.feedback.test_cases_parsed)) +
+    parser::append_string_debug("  - transmission: ", parser::process_string(session_data.feedback.transmission_finished ? "finished" : "pending")) +
+    parser::append_string_debug("  - handlers: ", parser::process_number(session_data.feedback.test_results.size()));
 
     for (auto const& [key, val] : session_data.feedback.test_results) { 
       results += key + " - "; 
@@ -2604,44 +2489,44 @@ std::string _show_feedback(const session_data& session_data) {
     return results;
 }
 
-std::string _show_internal(const session_data& session_data) {
+inline std::string _show_internal(const session_data& session_data) {
 
   auto results = std::string("Internal: \n") +
-    _append_string_debug("  - framework: ", _process_string(session_data.internal.framework)) +
-    _append_string_debug("  - qualified method name: ", _process_string(session_data.internal.method_name_qualified)) +
-    _append_string_debug("  - test session id: ", _process_string(session_data.internal.test_session_id)) +
-    _append_string_debug("  - timestamp: ", _process_string(session_data.internal.timestamp)) +
-    _append_string_debug("  - method header parsed: ", _process_string(session_data.internal.method_info_ready  ? "yes" : "no")) +
-    _append_string_debug("  - method argument names: ", _process_vector(session_data.internal.arg_names)) +
-    _append_string_debug("  - method argument types: ", _process_vector(session_data.internal.arg_types));
+    parser::append_string_debug("  - framework: ", parser::process_string(session_data.internal.framework)) +
+    parser::append_string_debug("  - qualified method name: ", parser::process_string(session_data.internal.method_name_qualified)) +
+    parser::append_string_debug("  - test session id: ", parser::process_string(session_data.internal.test_session_id)) +
+    parser::append_string_debug("  - timestamp: ", parser::process_string(session_data.internal.timestamp)) +
+    parser::append_string_debug("  - method header parsed: ", parser::process_string(session_data.internal.method_info_ready  ? "yes" : "no")) +
+    parser::append_string_debug("  - method argument names: ", parser::process_vector(session_data.internal.arg_names)) +
+    parser::append_string_debug("  - method argument types: ", parser::process_vector(session_data.internal.arg_types));
 
   return results;
 }
 
-std::string _show_main(const session_data& session_data) {
+inline std::string _show_main(const session_data& session_data) {
 
   auto results = std::string("SESSION DATA: \n") +
-    _append_string_debug("  - model: ", _process_string(session_data.model)) +
-    _append_string_debug("  - method: ", _process_string(session_data.method_name)) +
-    _append_string_debug("  - algorithm: ", _process_string(data_source_url_param(session_data.data_source))) +
-    _append_string_debug("  - template: ", session_data.process_template()) +
-    _append_string_debug("  - label: ", session_data.process_test_session_label()) +
-    _append_string_debug("  - custom: ", session_data.process_custom()) +
-    _append_string_debug("  - constraints: ", session_data.process_constraints()) +
-    _append_string_debug("  - test suites: ", session_data.process_test_suites()) +
-    _append_string_debug("  - choices: ", session_data.process_choices());
+    parser::append_string_debug("  - model: ", parser::process_string(session_data.model)) +
+    parser::append_string_debug("  - method: ", parser::process_string(session_data.method_name)) +
+    parser::append_string_debug("  - algorithm: ", parser::process_string(data_source_url_param(session_data.data_source))) +
+    parser::append_string_debug("  - template: ", session_data.process_template()) +
+    parser::append_string_debug("  - label: ", session_data.process_test_session_label()) +
+    parser::append_string_debug("  - custom: ", session_data.process_custom()) +
+    parser::append_string_debug("  - constraints: ", session_data.process_constraints()) +
+    parser::append_string_debug("  - test suites: ", session_data.process_test_suites()) +
+    parser::append_string_debug("  - choices: ", session_data.process_choices());
 
   return results;
 }
 
-std::string _show_connection(const session_data& session_data) {
+inline std::string _show_connection(const session_data& session_data) {
   
   return std::string("Connection: \n") +
-    _append_string_debug("  - generator address: ", _process_string(session_data.connection.generator_address)) +
-    _append_string_debug("  - request type: ", _process_string(session_data.connection.request_type)) +
-    _append_string_debug("  - path - cert: ", _process_string(session_data.connection.cert_path)) +
-    _append_string_debug("  - path - key: ", _process_string(session_data.connection.pkey_path)) +
-    _append_string_debug("  - path - ca: ", _process_string(session_data.connection.ca_path));
+    parser::append_string_debug("  - generator address: ", parser::process_string(session_data.connection.generator_address)) +
+    parser::append_string_debug("  - request type: ", parser::process_string(session_data.connection.request_type)) +
+    parser::append_string_debug("  - path - cert: ", parser::process_string(session_data.connection.cert_path)) +
+    parser::append_string_debug("  - path - key: ", parser::process_string(session_data.connection.pkey_path)) +
+    parser::append_string_debug("  - path - ca: ", parser::process_string(session_data.connection.ca_path));
 }
 
 inline std::ostream& operator<<(std::ostream& os, const session_data& session_data) {
@@ -2672,6 +2557,19 @@ inline std::ostream& operator<<(std::ostream& os, const test_arguments& test_arg
     return os;
 }
 
+inline std::ostream& operator<<(std::ostream& os, const test_handle& test_handle) {
+    os << "Handler:" << std::endl;
+    os << parser::append_string_debug("  - processed: ", parser::process_string(test_handle._pending ? "false" : "true"));
+    os << parser::append_string_debug("  - data: ", parser::process_string(test_handle._data));
+    os << parser::append_string_debug("  - id: ", parser::process_string(test_handle._id));
+    os << parser::append_string_debug("  - status: ", parser::process_string(test_handle._status));
+    os << parser::append_string_debug("  - duration: ", parser::process_number(test_handle._duration));
+    os << parser::append_string_debug("  - comment: ", parser::process_string(test_handle._comment));
+    os << parser::append_string_debug("  - custom: ", parser::process_map(test_handle._custom));
+
+    return os;
+}
+
 //----------------------------------------------------------------------------------------------
 
 std::string request::generate_request_url_stream_parameter(const session_data& session_data) {
@@ -2679,26 +2577,26 @@ std::string request::generate_request_url_stream_parameter(const session_data& s
 
     std::optional<picojson::value> schema = session_data.process_template();
     if (schema) {
-      _append_json(request, "template", schema);
+      parser::append_json(request, "template", schema);
     } else if (session_data.connection.request_type == "requestExport") {
-      _append_json(request, "template", _process_string("CSV"));
+      parser::append_json(request, "template", parser::process_string("CSV"));
     }
         
-    _append_json(request, "method", _process_string(session_data.method_name));
-    _append_json(request, "model", _process_string(session_data.model));
+    parser::append_json(request, "method", parser::process_string(session_data.method_name));
+    parser::append_json(request, "model", parser::process_string(session_data.model));
 
     picojson::object user_data;
-    _append_json(user_data, "dataSource", _process_string(data_source_url_param(session_data.data_source)));
-    _append_json(user_data, "choices", session_data.process_choices());
-    _append_json(user_data, "constraints", session_data.process_constraints());
-    _append_json(user_data, "testSuites", session_data.process_test_suites());
+    parser::append_json(user_data, "dataSource", parser::process_string(data_source_url_param(session_data.data_source)));
+    parser::append_json(user_data, "choices", session_data.process_choices());
+    parser::append_json(user_data, "constraints", session_data.process_constraints());
+    parser::append_json(user_data, "testSuites", session_data.process_test_suites());
 
     picojson::object properties;
-    _append_json(properties, "n", session_data.process_property("n"));
-    _append_json(properties, "coverage", session_data.process_property("coverage"));
-    _append_json(properties, "length", session_data.process_property("length"));
-    _append_json(properties, "duplicates", session_data.process_property("duplicates"));
-    _append_json(properties, "adaptive", session_data.process_property("adaptive"));
+    parser::append_json(properties, "n", session_data.process_property("n"));
+    parser::append_json(properties, "coverage", session_data.process_property("coverage"));
+    parser::append_json(properties, "length", session_data.process_property("length"));
+    parser::append_json(properties, "duplicates", session_data.process_property("duplicates"));
+    parser::append_json(properties, "adaptive", session_data.process_property("adaptive"));
 
     user_data["properties"] = picojson::value(properties);
 
@@ -2755,20 +2653,20 @@ std::string request::generate_request_url_feedback(const session_data& session_d
 std::string request::generate_request_url_feedback_body(const session_data& session_data) {
   picojson::object body;
 
-  _append_json(body, "testSessionId", _process_string(session_data.internal.test_session_id));
-  _append_json(body, "modelId", _process_string(session_data.model));
-  _append_json(body, "methodInfo", _process_string(session_data.internal.method_name_qualified));
-  _append_json(body, "framework", _process_string(session_data.internal.framework));
-  _append_json(body, "timestamp", _process_number(std::stod(session_data.internal.timestamp)));
-  _append_json(body, "generatorType", _process_string(data_source_url_param(session_data.data_source)));
+  parser::append_json(body, "testSessionId", parser::process_string(session_data.internal.test_session_id));
+  parser::append_json(body, "modelId", parser::process_string(session_data.model));
+  parser::append_json(body, "methodInfo", parser::process_string(session_data.internal.method_name_qualified));
+  parser::append_json(body, "framework", parser::process_string(session_data.internal.framework));
+  parser::append_json(body, "timestamp", parser::process_number(std::stod(session_data.internal.timestamp)));
+  parser::append_json(body, "generatorType", parser::process_string(data_source_url_param(session_data.data_source)));
   
-  _append_json(body, "generatorOptions", session_data.process_gen_options());
-  _append_json(body, "testSessionLabel", session_data.process_test_session_label());
-  _append_json(body, "constraints", session_data.process_constraints());
-  _append_json(body, "testSuites", session_data.process_test_suites());
-  _append_json(body, "custom", session_data.process_custom());
-  _append_json(body, "choices", session_data.process_choices());
-  _append_json(body, "testResults", session_data.process_test_results());
+  parser::append_json(body, "generatorOptions", session_data.process_gen_options());
+  parser::append_json(body, "testSessionLabel", session_data.process_test_session_label());
+  parser::append_json(body, "constraints", session_data.process_constraints());
+  parser::append_json(body, "testSuites", session_data.process_test_suites());
+  parser::append_json(body, "custom", session_data.process_custom());
+  parser::append_json(body, "choices", session_data.process_choices());
+  parser::append_json(body, "testResults", session_data.process_test_results());
 
   return picojson::value(body).serialize();
 }
@@ -2852,11 +2750,11 @@ std::optional<picojson::value> session_data::process_test_results() const {
 
     picojson::object data;
 
-    _append_json(data, "testCase", _process_string(test_handle->_data));
-    _append_json(data, "status", _process_string(test_handle->_status));
-    _append_json(data, "comment", _process_string(test_handle->_comment));
-    _append_json(data, "duration", _process_number(test_handle->_duration));
-    _append_json(data, "custom", _process_map(test_handle->_custom));
+    parser::append_json(data, "testCase", parser::process_string(test_handle->_data));
+    parser::append_json(data, "status", parser::process_string(test_handle->_status));
+    parser::append_json(data, "comment", parser::process_string(test_handle->_comment));
+    parser::append_json(data, "duration", parser::process_number(test_handle->_duration));
+    parser::append_json(data, "custom", parser::process_map(test_handle->_custom));
 
     body[key] = picojson::value(data);
   }
@@ -2883,7 +2781,7 @@ std::optional<picojson::value> session_data::process_constraints() const {
     try {
       box = picojson::value(std::any_cast<std::string>(field->second));
     } catch(std::bad_any_cast) {
-      box = _process_set(std::any_cast<std::set<std::string>>(field->second));
+      box = parser::process_set(std::any_cast<std::set<std::string>>(field->second));
     }
   }
 
@@ -2898,7 +2796,7 @@ std::optional<picojson::value> session_data::process_test_suites() const {
     try {
       box = picojson::value(std::any_cast<std::string>(field->second));
     } catch(std::bad_any_cast) {
-      box = _process_set(std::any_cast<std::set<std::string>>(field->second));
+      box = parser::process_set(std::any_cast<std::set<std::string>>(field->second));
     }
   }
 
@@ -2910,7 +2808,7 @@ std::optional<picojson::value> session_data::process_custom() const {
 
   auto field = main.find("custom");
   if (field != main.end()) {
-    box = _process_map(std::any_cast<std::map<std::string, std::string>>(field->second));
+    box = parser::process_map(std::any_cast<std::map<std::string, std::string>>(field->second));
   }
 
   return box;
@@ -2927,7 +2825,7 @@ std::optional<picojson::value> session_data::process_choices() const {
       picojson::object parser;
       
       for (auto x : std::any_cast<std::map<std::string, std::set<std::string>>>(field->second)) {
-        _append_json(parser, x.first, _process_set(x.second));
+        parser::append_json(parser, x.first, parser::process_set(x.second));
       }
       
       box = picojson::value(parser);
@@ -2949,7 +2847,112 @@ std::optional<picojson::value> session_data::process_template() const {
   return box;
 }
 
+void session_data::set_connection_details(const std::string& cert_path, const std::string& pkey_path, const std::string& ca_path, CURL* curl_handle) {
+  connection.cert_path = cert_path;
+  connection.pkey_path = pkey_path;
+  connection.ca_path = ca_path;
+  connection.curl_handle = curl_handle;
+}
+
 //----------------------------------------------------------------------------------------------
+
+template<typename T>
+std::optional<picojson::value> parser::process_number(const T value) {
+  std::optional<picojson::value> box;
+
+  if (value > 0) {
+    box = picojson::value(static_cast<double>(value));
+  }
+
+  return box;
+}
+
+std::optional<picojson::value> parser::process_string(const std::string& value) {
+  std::optional<picojson::value> box;
+
+  if (value != "") {
+    box = picojson::value(value);
+  }
+
+  return box;
+}
+
+std::optional<picojson::value> parser::process_set(const std::set<std::string>& value) {
+  std::optional<picojson::value> box;
+  std::vector<picojson::value> parser;
+      
+  if (value.size() > 0) {
+    
+    for (auto x : value) {
+      parser.push_back(picojson::value(x));
+    }
+  
+    box = picojson::value(parser);
+  }
+      
+  return box;
+}
+
+std::optional<picojson::value> parser::process_vector(const std::vector<std::string>& value) {
+  std::optional<picojson::value> box;
+  std::vector<picojson::value> parser;
+      
+  if (value.size() > 0) {
+    
+    for (auto x : value) {
+      parser.push_back(picojson::value(x));
+    }
+  
+    box = picojson::value(parser);
+  }
+      
+  return box;
+}
+
+std::optional<picojson::value> parser::process_map(const std::map<std::string, std::string>& value) {
+  std::optional<picojson::value> box;
+  
+  if (value.size() > 0) {
+    picojson::object parser;
+
+    for (auto const& [key, val] : value) { 
+      parser[key] = picojson::value(val);
+    }
+
+    box = picojson::value(parser);
+  }
+
+  return box;
+}
+
+std::string parser::append_string_debug(std::string appendix, std::optional<picojson::value> box) {
+
+  if (box) {
+    return appendix + box.value().serialize() + "\n";
+  } else {
+    return appendix + "-\n";
+  }
+}
+
+std::string parser::append_string_request(std::string key, std::optional<picojson::value> box) {
+
+  if (box) {
+    picojson::object body;
+    body[key] = box.value();
+    return picojson::value(body).serialize();
+  } else {
+    return "";
+  }
+}
+
+picojson::object& parser::append_json(picojson::object& json, std::string field, std::optional<picojson::value> box) {
+  
+  if (box) {
+    json[field] = box.value();
+  }
+
+  return json;
+}
 
 }
 
