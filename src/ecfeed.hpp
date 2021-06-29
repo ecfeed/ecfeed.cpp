@@ -1382,6 +1382,7 @@ public:
   std::string add_feedback(bool status, int duration = -1, std::string comment = "", std::map<std::string, std::string> custom = std::map<std::string, std::string>()) {
     
     if (this->_session_data.feedback.process && this->_pending) {
+
       this->_status = status ? "P" : "F";
       this->_duration = duration;
       this->_comment = comment;
@@ -2572,7 +2573,7 @@ std::string request::generate_request_url_stream_parameter(const session_data& s
     parser::append_json(request, "model", parser::process_string(session_data.model));
 
     picojson::object user_data;
-    parser::append_json(user_data, "dataSource", parser::process_string(data_source_url_param(session_data.data_source)));
+    parser::append_json(user_data, "dataSource", parser::process_string(data_source_url_param(session_data.data_source)));;
     parser::append_json(user_data, "choices", session_data.process_choices());
     parser::append_json(user_data, "constraints", session_data.process_constraints());
     parser::append_json(user_data, "testSuites", session_data.process_test_suites());
@@ -2591,6 +2592,7 @@ std::string request::generate_request_url_stream_parameter(const session_data& s
 
     request["userData"] = picojson::value(user_data_string);
 
+std::cerr << picojson::value(request).serialize() << std::endl;
     return picojson::value(request).serialize();
 }
 
@@ -2660,7 +2662,6 @@ std::string request::generate_request_url_feedback_body(const session_data& sess
 void request::process_feedback(session_data& session_data) {
 
   if (session_data.feedback.test_cases_parsed == session_data.feedback.test_cases_total && session_data.feedback.transmission_finished) {
-    std::cerr << "finito" << std::endl;
 
     request::perform_request_feedback(session_data);
 
@@ -2677,6 +2678,8 @@ void request::perform_request_feedback(const ecfeed::session_data& session_data)
 
   std::string url = request::generate_request_url_feedback(session_data);
   std::string body = request::generate_request_url_feedback_body(session_data);
+
+  std::cerr << body << std::endl << std::endl;
 
   struct curl_slist *headers = NULL;
   headers = curl_slist_append(headers, "Accept: application/json");
@@ -2793,8 +2796,13 @@ std::optional<picojson::value> session_data::process_constraints() const {
 
   auto field = main.find("constraints");
   if (field != main.end()) {
+    
     try {
-      box = picojson::value(std::any_cast<std::string>(field->second));
+      std::string value = std::any_cast<std::string>(field->second);
+
+      if (value != "" && value != "ALL") {
+        box = picojson::value(value);
+      }
     } catch(std::bad_any_cast) {
       box = parser::process_set(std::any_cast<std::set<std::string>>(field->second));
     }
@@ -2808,8 +2816,13 @@ std::optional<picojson::value> session_data::process_test_suites() const {
 
   auto field = main.find("test_suites");
   if (field != main.end()) {
+    
     try {
-      box = picojson::value(std::any_cast<std::string>(field->second));
+      std::string value = std::any_cast<std::string>(field->second);
+
+      if (value != "" && value != "ALL") {
+        box = picojson::value(value);
+      }
     } catch(std::bad_any_cast) {
       box = parser::process_set(std::any_cast<std::set<std::string>>(field->second));
     }
@@ -2834,21 +2847,25 @@ std::optional<picojson::value> session_data::process_choices() const {
   
   auto field = main.find("choices");
   if (field != main.end()) {
+    
     try {
-      box = picojson::value(std::any_cast<std::string>(field->second));
+      std::string value = std::any_cast<std::string>(field->second);
+
+      if (value != "" && value != "ALL") {
+        box = picojson::value(value);
+      }
     } catch(std::bad_any_cast) {
       picojson::object parser;
-      
+        
       for (auto x : std::any_cast<std::map<std::string, std::set<std::string>>>(field->second)) {
         parser::append_json(parser, x.first, parser::process_set(x.second));
       }
-      
+        
       box = picojson::value(parser);
     }
   }
 
   return box;
-
 }
 
 std::optional<picojson::value> session_data::process_template() const {
