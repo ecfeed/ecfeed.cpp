@@ -1,6 +1,6 @@
 [requires]
-    catch2/2.13.2
-    ecfeed/1.0.0
+    catch2/2.13.4
+    ecfeed/1.1.0
 [generators]
     cmake
 [options]
