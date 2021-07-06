@@ -1,7 +1,6 @@
 #include "gtest/gtest.h"
-// #include "ecfeed.hpp"
+#include "ecfeed.hpp"
 #include <iostream>
-#include "../../src/ecfeed.hpp"
 
 namespace test_generate {
 

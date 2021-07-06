@@ -1,7 +1,6 @@
 #include "gtest/gtest.h"
-// #include "ecfeed.hpp"
+#include "ecfeed.hpp"
 #include <iostream>
-#include "../../src/ecfeed.hpp"
 
 namespace test_export {
 
@@ -18,10 +17,10 @@ namespace test_export {
 
 class FixtureExport : public ::testing::TestWithParam<std::string> {};
 
-// INSTANTIATE_TEST_CASE_P(Generate, FixtureExport, ::testing::ValuesIn((test_export::testProvider.export_nwise(test_export::method, test_export::_nwise))->to_list()));
-// TEST_P(FixtureExport, NWise_Export) {
-//    std::cout << GetParam() << std::endl;
-// }
+INSTANTIATE_TEST_CASE_P(Generate, FixtureExport, ::testing::ValuesIn((test_export::testProvider.export_nwise(test_export::method, test_export::_nwise))->to_list()));
+TEST_P(FixtureExport, NWise_Export) {
+   std::cout << GetParam() << std::endl;
+}
 
 // INSTANTIATE_TEST_CASE_P(Generate, FixtureExport, ::testing::ValuesIn((test_export::testProvider.export_pairwise(test_export::method, test_export::_pairwise))->to_list()));
 // TEST_P(FixtureExport, Pairwise_Export) {
