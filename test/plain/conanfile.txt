@@ -1,5 +1,0 @@
-[requires]
-    ecfeed/1.0.0
-[generators]
-    cmake
-[options]
