@@ -1219,6 +1219,8 @@ inline std::ostream &operator<<(std::ostream &os, const picojson::value &x) {
 #include <future>
 #include <unistd.h>
 #include <unordered_map>
+#include <optional>
+#include <algorithm>
 
 namespace ecfeed {
 
@@ -1227,7 +1229,7 @@ enum class template_type {
     xml = 2,
     gherkin = 3,
     json = 4,
-    raw = 5,
+    raw = 5
 };
 
 static std::string template_type_url_param(const template_type& t) {
@@ -1271,133 +1273,136 @@ static std::string data_source_url_param(const data_source& s) {
     return "UNKNOWN";
 }
 
-struct method_info {
-    std::vector<std::string> arg_names;
-    std::vector<std::string> arg_types;
+struct session_data_feedback {
+  bool process = false;
+  int test_cases_total = 0;
+  int test_cases_parsed = 0;
+  bool transmission_finished = false;
+  std::map<std::string, std::any> test_results;
 };
 
-class serializer {
-    std::unordered_map<std::type_index, std::function<std::string(const std::any&)>> _serializers;
+struct session_data_connection {
+  std::string generator_address;
+  std::string request_type;
+  std::string cert_path;
+  std::string pkey_path;
+  std::string ca_path;
+  CURL* curl_handle;
+};
+
+struct session_data_internal {
+  std::string framework = "C++";
+  std::string method_name_qualified;
+  std::string test_session_id;
+  std::string timestamp;
+  std::vector<std::string> arg_names;
+  std::vector<std::string> arg_types;
+  bool method_info_ready = false;
+};
+
+struct session_data {
+  std::string model;
+  std::string method_name;
+  ecfeed::data_source data_source;
+  
+  std::map<std::string, std::any> main;
+  std::map<std::string, std::string> properties;
+  
+  ecfeed::session_data_feedback feedback;
+  ecfeed::session_data_internal internal;
+  ecfeed::session_data_connection connection;
+
+  friend std::ostream& operator<<(std::ostream& os, const session_data& data);
+
+  std::optional<picojson::value> process_gen_options() const;
+  std::optional<picojson::value> process_test_results() const;
+  std::optional<picojson::value> process_test_session_label() const;
+  std::optional<picojson::value> process_constraints() const;
+  std::optional<picojson::value> process_test_suites() const;
+  std::optional<picojson::value> process_custom() const;
+  std::optional<picojson::value> process_choices() const;
+  std::optional<picojson::value> process_template() const;
+  std::optional<picojson::value> process_property(const std::string parameter) const;
+
+  void set_connection_details(const std::string& cert_path, const std::string& pkey_path, const std::string& ca_path, CURL* curl_handle);
+};
+
+class request {
+  static std::string escape_url(const std::string& request);
+  static std::string generate_request_url_stream(const session_data& session_data);
+  static std::string generate_request_url_stream_parameter(const session_data& session_data);
+  static std::string generate_request_url_feedback(const session_data& session_data);
+  static std::string generate_request_url_feedback_body(const session_data& session_data);
+  static size_t curl_data_callback(void *data, size_t size, size_t nmemb, void *userp);
+public:
+  static void process_feedback(session_data& session_data);
+  static void perform_request_feedback(const ecfeed::session_data& session_data);
+  static void perform_request_stream(const ecfeed::session_data& session_data, const std::function<size_t(void *data, size_t size, size_t nmemb)>* data_callback);
+};
+
+class parser {
+public:
+  template<typename T> static std::optional<picojson::value> process_number(const T value);
+  static std::optional<picojson::value> process_string(const std::string& value);
+  static std::optional<picojson::value> process_set(const std::set<std::string>& value);
+  static std::optional<picojson::value> process_vector(const std::vector<std::string>& value);
+  static std::optional<picojson::value> process_map(const std::map<std::string, std::string>& value);
+  static std::string append_string_debug(std::string appendix, std::optional<picojson::value> box);
+  static std::string append_string_request(std::string key, std::optional<picojson::value> box);
+  static picojson::object& append_json(picojson::object& json, std::string field, std::optional<picojson::value> box);
+};
+
+class test_handle {
+  session_data& _session_data;
+  std::string _data;
+  std::string _id;
+  bool _pending = true;
+  std::string _status;
+  int _duration = -1;
+  std::string _comment;
+  std::map<std::string, std::string> _custom;
+
+  friend std::ostream& operator<<(std::ostream& os, const test_handle& test_handle);
+  friend std::optional<picojson::value> session_data::process_test_results() const;
+  
+  void _process() { 
+    this->_session_data.feedback.test_cases_parsed++;
+    this->_session_data.feedback.test_results[this->_id] = this;
+    this->_pending = false;
+
+    request::process_feedback(this->_session_data);
+  }
 
 public:
 
-    serializer() {
+  test_handle(session_data& session_data, std::string data, std::string id) : _session_data(session_data), _id(id) {
+    this->_data = "{\"testCase\":" + data + "}";
+  }
 
-       _init_serializers();
+  std::string add_feedback(bool status, int duration = -1, std::string comment = "", std::map<std::string, std::string> custom = std::map<std::string, std::string>()) {
+    
+    if (this->_session_data.feedback.process && this->_pending) {
+
+      this->_status = status ? "P" : "F";
+      this->_duration = duration;
+      this->_comment = comment;
+      this->_custom = custom;
+
+      _process();
     }
+    
+    return comment != "" ? comment : "feedback";
+  }
 
-    std::string serialize(const std::pair<std::string, std::any>&v) {
+  std::string add_feedback(bool status, int duration, std::map<std::string, std::string> custom) {
 
-        return "'" + v.first + "':" + _serialize(v.second);
-    }
+    return add_feedback(status, duration, "", custom);
+  }
 
-private:
+  std::string add_feedback(bool status, std::string comment, std::map<std::string, std::string> custom) {
 
-    void _init_serializers() {
-
-        _serializers[std::type_index(typeid(unsigned))] = [&](const std::any& v) {
-
-            return "'" + std::to_string(std::any_cast<unsigned>(v)) + "'";
-        };
-
-        _serializers[std::type_index(typeid(int))] = [&](const std::any& v) {
-
-            return "'" + std::to_string(std::any_cast<int>(v)) + "'";
-        };
-
-        _serializers[std::type_index(typeid(bool))] = [&](const std::any& v) {
-
-            return std::string("'") + (std::any_cast<bool>(v) ? "true" : "false") + "'";
-        };
-
-        _serializers[std::type_index(typeid(std::string))] = [&](const std::any& v) {
-
-            return "'" + std::any_cast<std::string>(v) + "'";
-        };
-
-        _serializers[std::type_index(typeid(data_source))] = [&](const std::any& v) {
-
-            return "'" + data_source_url_param(std::any_cast<data_source>(v)) + "'";
-        };
-
-        _serializers[std::type_index(typeid(template_type))] = [&](const std::any& v) {
-
-            return "'" + template_type_url_param(std::any_cast<template_type>(v)) + "'";
-        };     
-
-        _serializers[std::type_index(typeid(std::set<std::string>))] = [&](const std::any& v) {
-            std::string result = "[";
-            std::string padding = "";
-
-            for (auto& e : std::any_cast<std::set<std::string>>(v)) {
-                result += padding + _serialize(e);
-                padding = ",";
-            }
-
-            return result + "]";
-        };
-
-        _serializers[std::type_index(typeid(std::list<std::string>))] = [&](const std::any& v) {
-            std::string result = "[";
-            std::string padding = "";
-
-            for (auto& e : std::any_cast<std::list<std::string>>(v)) {
-                result += padding + _serialize(e);
-                padding = ",";
-            }
-
-                return result + "]";
-        };
-
-        _serializers[std::type_index(typeid(std::vector<std::string>))] = [&](const std::any& v) {
-            std::string result = "[";
-            std::string padding = "";
-
-            for (auto& e : std::any_cast<std::vector<std::string>>(v)) {
-                result += padding + _serialize(e);
-                padding = ",";
-            }
-
-            return result + "]";
-        };
-
-        _serializers[std::type_index(typeid(std::map<std::string, std::set<std::string>>))] = [&](const std::any& v) {
-            std::string result = "{";
-            std::string padding = "";
-            auto casted = std::any_cast<std::map<std::string, std::set<std::string>>>(v);
-
-            for (auto& e : casted) {
-                result += padding + "'" + e.first + "':" + _serialize(e.second);
-                padding = ",";
-            }
-
-            return result + "}";
-        };
-
-        _serializers[std::type_index(typeid(std::map<std::string, std::any>))] = [&](const std::any& v) {
-            std::string result = "{";
-            std::string padding = "";
-            auto casted = std::any_cast<std::map<std::string, std::any>>(v);
-
-            for (auto& e : casted) {
-                result += padding + "'" + e.first + "':" + _serialize(e.second);
-                padding = ",";
-            }
-
-            return result + "}";
-        };
-    }
-
-    std::string _serialize(const std::any& v) {
-
-        if (auto serializer = _serializers.find(v.type()); serializer != _serializers.end()) {
-            return serializer->second(v);
-        } else {
-            std::cerr << "Cannot serialize option. Serializer for given type not registered.\n";
-            return "";
-        }
-    };
-
+    return add_feedback(status, -1, comment, custom);
+  }
 };
 
 struct argument {
@@ -1408,11 +1413,16 @@ struct argument {
 
 class test_arguments {
     std::vector<argument> core;
+    ecfeed::test_handle* handle;
+
+    friend std::ostream& operator<<(std::ostream& os, const test_arguments& test_arguments);
 
 public:
 
-    void add(std::string name, std::string type, std::string value) {
+    test_arguments(ecfeed::test_handle* test_handle) : handle(test_handle) {
+    }
 
+    void add(std::string name, std::string type, std::string value) {
         argument element;
 
         element.name = name;
@@ -1427,13 +1437,18 @@ public:
         return core;
     }
 
+    ecfeed::test_handle* get_handle() const {
+
+        return handle;
+    }
+
     int get_size() const {
 
         return core.size();
     }
 
     template<typename T>
-    T get(int index) const  {
+    T get(int index) const {
         argument element = core.at(index);
 
         return _parse<T>(element.type, element.value);
@@ -1515,20 +1530,20 @@ private:
 
     template<typename T>
     T _parse(std::string type, std::string value) const {
-            
-        if (type == "String") return std::any_cast<T>(value);
-        else if (type == "char") return std::any_cast<T>(static_cast<char>(value.at(0)));
-        else if (type == "short") return std::any_cast<T>(static_cast<short>(std::stoi(value)));
-        else if (type == "byte") return std::any_cast<T>(std::stoi(value));
-        else if (type == "int") return std::any_cast<T>(std::stoi(value));
-        else if (type == "long") return std::any_cast<T>(std::stol(value));
-        else if (type == "float") return std::any_cast<T>(std::stof(value));
-        else if (type == "double") return std::any_cast<T>(std::stod(value));
-        else if (type == "boolean") return std::any_cast<T>(value == "true");
-        else {
-            std::cerr << "Unknown parameter type: " << type << ". Converting the parameter to String\n";
-            return std::any_cast<T>(value);
-        }
+
+      if (type == "String") return std::any_cast<T>(value);
+      else if (type == "char") return std::any_cast<T>(static_cast<char>(value.at(0)));
+      else if (type == "short") return std::any_cast<T>(static_cast<short>(std::stoi(value)));
+      else if (type == "byte") return std::any_cast<T>(std::stoi(value));
+      else if (type == "int") return std::any_cast<T>(std::stoi(value));
+      else if (type == "long") return std::any_cast<T>(std::stol(value));
+      else if (type == "float") return std::any_cast<T>(std::stof(value));
+      else if (type == "double") return std::any_cast<T>(std::stod(value));
+      else if (type == "boolean") return std::any_cast<T>(value == "true");
+      else {
+        std::cerr << "Unknown parameter type: " << value << ". Converting the parameter to String\n";
+        return std::any_cast<T>(value);
+      }
     }
 };
 
@@ -1584,12 +1599,15 @@ class test_queue {
     std::mutex _cv_mutex;
     std::condition_variable _cv;
 
-    method_info _method_info;
-    bool _method_info_ready;
+    session_data _session_data;
 
 public:
 
-    test_queue() : _done(false), _begin(*this), _end(*this, true), _method_info_ready(false) {
+    test_queue(const session_data& session_data) : _done(false), _begin(*this), _end(*this, true) {
+      _session_data = session_data;
+    }
+
+    test_queue() : _done(false), _begin(*this), _end(*this, true) {
     }
 
     const_iterator begin() const {
@@ -1629,6 +1647,8 @@ public:
 
         _data.push_back(element);
         _cv.notify_one();
+
+        _session_data.feedback.test_cases_total++;
     }
 
     T& current_element() {
@@ -1648,6 +1668,9 @@ public:
 
         _done = true;
         _cv.notify_one();
+
+        _session_data.feedback.transmission_finished = true;
+        request::process_feedback(_session_data);
     }
 
     bool empty() {
@@ -1673,7 +1696,7 @@ public:
             _cv.wait(cv_lock);
         }
 
-        return _method_info.arg_types;
+        return _session_data.internal.arg_types;
     }
         
     std::vector<std::string> get_argument_names() {
@@ -1683,24 +1706,24 @@ public:
             _cv.wait(cv_lock);
         }
 
-        return _method_info.arg_names;
+        return _session_data.internal.arg_names;
     }
 
 private:
 
     void _set_method_info_ready() {
 
-        _method_info_ready = true;
+        _session_data.internal.method_info_ready = true;
     }
 
     bool& _get_method_info_ready() {
 
-        return _method_info_ready;
+        return _session_data.internal.method_info_ready;
     }
 
-    method_info& _get_method_info() {
+    session_data& _get_session_data() {
 
-        return _method_info;
+        return _session_data;
     }
 
 };
@@ -1709,24 +1732,61 @@ class params_common_getter {
 protected:
 
     ecfeed::template_type _template_type;
+    std::string _label;
+    std::map<std::string, std::string> _custom;
     std::any _constraints;
     std::any _choices;
+    bool _feedback;
 
 public:
 
-    params_common_getter() : _template_type(ecfeed::template_type::csv), _constraints(std::string("ALL")), _choices(std::string("ALL"))
+    params_common_getter() : 
+        _template_type(ecfeed::template_type::csv),
+        _label(std::string("")), 
+        _constraints(std::string("ALL")), 
+        _choices(std::string("ALL")),
+        _feedback(false)
     {}
 
     ecfeed::template_type& get_template_type()  {
         return _template_type;
     }
 
-    std::any& get_constraints()  {
+    std::string& get_label() {
+        return _label;
+    }
+
+    std::map<std::string, std::string> get_custom() {
+        return _custom;
+    }
+
+    std::any& get_constraints() {
         return _constraints;
     }
 
-    std::any& get_choices()  {
+    std::any& get_choices() {
         return _choices;
+    }
+
+    bool& get_feedback() {
+      return _feedback;
+    }
+
+    virtual session_data get_session_data(const std::string& model, const std::string& method, const std::string& generator) {
+        session_data data;
+
+        data.model = model;
+        data.method_name = method;
+        data.connection.generator_address = generator;
+        data.feedback.process = _feedback;
+        
+        data.main["template"] = _template_type;
+        data.main["label"] = _label;
+        data.main["custom"] = _custom;
+        data.main["constraints"] = _constraints;
+        data.main["choices"] = _choices;
+
+        return data;
     }
 
 };
@@ -1737,6 +1797,16 @@ public:
 
     T& template_type(ecfeed::template_type template_type) {
         _template_type = template_type;
+        return self();
+    }
+
+    T& label(std::string label) {
+        _label = label;
+        return self();
+    }
+
+    T& custom(std::map<std::string, std::string> custom) {
+        _custom = custom;
         return self();
     }
 
@@ -1760,8 +1830,12 @@ public:
         return self();
     }
 
-    virtual T& self() = 0;
+    T& feedback(bool feedback) {
+      _feedback = feedback;
+      return self();
+    }
 
+    virtual T& self() = 0;
 };
 
 class params_nwise : public params_common_setter<params_nwise> {
@@ -1795,6 +1869,17 @@ public:
     params_nwise& self() {
       return *this;
     }
+
+    virtual session_data get_session_data(const std::string& model, const std::string& method, const std::string& generator) {
+        session_data data = params_common_getter::get_session_data(model, method, generator);
+      
+        data.data_source = data_source::nwise;
+
+        data.properties["n"] = std::to_string(_n);
+        data.properties["coverage"] = std::to_string(_coverage);
+
+        return data;
+    }
     
 };
 
@@ -1824,6 +1909,17 @@ public:
     params_pairwise& self() {
       return *this;
     }
+
+    virtual session_data get_session_data(const std::string& model, const std::string& method, const std::string& generator) {
+        session_data data = params_common_getter::get_session_data(model, method, generator);
+      
+        data.data_source = data_source::nwise;
+
+        data.properties["n"] = std::to_string(_n);
+        data.properties["coverage"] = std::to_string(_coverage);
+
+        return data;
+    }
     
 };
 
@@ -1832,6 +1928,14 @@ public:
 
     params_cartesian& self() {
       return *this;
+    }
+
+    virtual session_data get_session_data(const std::string& model, const std::string& method, const std::string& generator) {
+        session_data data = params_common_getter::get_session_data(model, method, generator);
+      
+        data.data_source = data_source::cartesian;
+
+        return data;
     }
 };
 
@@ -1843,7 +1947,7 @@ class params_random : public params_common_setter<params_random> {
 
 public:
 
-    params_random() : _length(10), _duplicates(false), _adaptive(false)
+    params_random() : _length(10), _duplicates(true), _adaptive(false)
     {}
 
     unsigned int get_length() {
@@ -1876,6 +1980,18 @@ public:
     params_random& self() {
         return *this;
     }
+
+    virtual session_data get_session_data(const std::string& model, const std::string& method, const std::string& generator) {
+        session_data data = params_common_getter::get_session_data(model, method, generator);
+      
+        data.data_source = data_source::random;
+
+        data.properties["length"] = std::to_string(_length);
+        data.properties["duplicates"] = _duplicates ? "true" : "false";
+        data.properties["adaptive"] = _adaptive ? "true" : "false";
+
+        return data;
+    }
     
 };
 
@@ -1906,6 +2022,16 @@ public:
         return *this;
     }
 
+    virtual session_data get_session_data(const std::string& model, const std::string& method, const std::string& generator) {
+        session_data data = params_common_getter::get_session_data(model, method, generator);
+      
+        data.data_source = data_source::static_data;
+
+        data.main["test_suites"] = _test_suites;
+
+        return data;
+    }
+
 };
 
 class test_provider {
@@ -1922,8 +2048,7 @@ class test_provider {
     std::list<std::future<void>> _running_requests;
 
     std::mutex _mutex;
-    serializer _serializer;
-
+    
 public:
 
     std::string model;
@@ -1973,92 +2098,104 @@ public:
     std::shared_ptr<test_queue<std::string>> export_nwise(const std::string& method, ecfeed::params_nwise options = ecfeed::params_nwise()) {
         std::lock_guard<std::mutex> lock(_mutex);
 
-        std::map<std::string, std::any> opt = _setup(options, _setup_nwise(options), data_source::nwise, true);
-       
-        return _export(method, opt);
+        session_data data = options.get_session_data(model, method, _genserver);
+        data.set_connection_details(_cert_path.string(), _pkey_path.string(), _ca_path.string(), _curl_handle);
+        data.connection.request_type = "requestExport";
+
+        return _export(data);
     }
 
     std::shared_ptr<test_queue<test_arguments>> generate_nwise(const std::string& method, ecfeed::params_nwise options = ecfeed::params_nwise()) {
         std::lock_guard<std::mutex> lock(_mutex);
 
-        std::map<std::string, std::any> opt = _setup(options, _setup_nwise(options), data_source::nwise, false);
-
-        return _generate(method, opt);
+        session_data data = options.get_session_data(model, method, _genserver);
+        data.set_connection_details(_cert_path.string(), _pkey_path.string(), _ca_path.string(), _curl_handle);
+        data.connection.request_type = "requestData";
+        
+        return _generate(data);
     }
 
     std::shared_ptr<test_queue<std::string>> export_pairwise(const std::string& method, ecfeed::params_pairwise options = ecfeed::params_pairwise()) {
         std::lock_guard<std::mutex> lock(_mutex);
 
-        std::map<std::string, std::any> opt = _setup(options, _setup_pairwise(options), data_source::nwise, true);
+        session_data data = options.get_session_data(model, method, _genserver);
+        data.set_connection_details(_cert_path.string(), _pkey_path.string(), _ca_path.string(), _curl_handle);
+        data.connection.request_type = "requestExport";
 
-        return _export(method, opt);
+        return _export(data);
     }
 
     std::shared_ptr<test_queue<test_arguments>> generate_pairwise(const std::string& method, ecfeed::params_pairwise options = ecfeed::params_pairwise()) {
         std::lock_guard<std::mutex> lock(_mutex);
 
-        std::map<std::string, std::any> opt = _setup(options, _setup_pairwise(options), data_source::nwise, false);
-
-        return _generate(method, opt);
+        session_data data = options.get_session_data(model, method, _genserver);
+        data.set_connection_details(_cert_path.string(), _pkey_path.string(), _ca_path.string(), _curl_handle);
+        data.connection.request_type = "requestData";
+        
+        return _generate(data);
     }
 
     std::shared_ptr<test_queue<std::string>> export_random(const std::string& method, ecfeed::params_random options = ecfeed::params_random()) {
         std::lock_guard<std::mutex> lock(_mutex);
 
-        std::map<std::string, std::any> opt = _setup(options, _setup_random(options), data_source::random, true);
+        session_data data = options.get_session_data(model, method, _genserver);
+        data.set_connection_details(_cert_path.string(), _pkey_path.string(), _ca_path.string(), _curl_handle);
+        data.connection.request_type = "requestExport";
 
-        return _export(method, opt);
+        return _export(data);
     }
 
     std::shared_ptr<test_queue<test_arguments>> generate_random(const std::string& method, ecfeed::params_random options = ecfeed::params_random()) {
         std::lock_guard<std::mutex> lock(_mutex);
 
-        std::map<std::string, std::any> opt = _setup(options, _setup_random(options), data_source::random, false);
-
-        return _generate(method, opt);
+        session_data data = options.get_session_data(model, method, _genserver);
+        data.set_connection_details(_cert_path.string(), _pkey_path.string(), _ca_path.string(), _curl_handle);
+        data.connection.request_type = "requestData";
+        
+        return _generate(data);
     }
 
     std::shared_ptr<test_queue<std::string>> export_cartesian(const std::string& method, ecfeed::params_cartesian options = ecfeed::params_cartesian()) {
         std::lock_guard<std::mutex> lock(_mutex);
 
-        std::map<std::string, std::any> opt = _setup(options, _setup_cartesian(options), data_source::cartesian, true);
+        session_data data = options.get_session_data(model, method, _genserver);
+        data.set_connection_details(_cert_path.string(), _pkey_path.string(), _ca_path.string(), _curl_handle);
+        data.connection.request_type = "requestExport";
 
-        return _export(method, opt);
+        return _export(data);
     }
 
     std::shared_ptr<test_queue<test_arguments>> generate_cartesian(const std::string& method, ecfeed::params_cartesian options = ecfeed::params_cartesian()) {
         std::lock_guard<std::mutex> lock(_mutex);
 
-        std::map<std::string, std::any> opt = _setup(options, _setup_cartesian(options), data_source::cartesian, false);
-
-        return _generate(method, opt);
+        session_data data = options.get_session_data(model, method, _genserver);
+        data.set_connection_details(_cert_path.string(), _pkey_path.string(), _ca_path.string(), _curl_handle);
+        data.connection.request_type = "requestData";
+        
+        return _generate(data);
     }
 
     std::shared_ptr<test_queue<std::string>> export_static(const std::string& method, ecfeed::params_static options = ecfeed::params_static()) {
         std::lock_guard<std::mutex> lock(_mutex);
 
-        std::map<std::string, std::any> opt = _setup(options, _setup_static(options), data_source::static_data, true);
-        opt["testSuites"] =  options.get_test_suites();
+        session_data data = options.get_session_data(model, method, _genserver);
+        data.set_connection_details(_cert_path.string(), _pkey_path.string(), _ca_path.string(), _curl_handle);
+        data.connection.request_type = "requestExport";
 
-        return _export(method, opt);
+        return _export(data);
     }
 
     std::shared_ptr<test_queue<test_arguments>> generate_static(const std::string& method, ecfeed::params_static options = ecfeed::params_static()) {
         std::lock_guard<std::mutex> lock(_mutex);
 
-        std::map<std::string, std::any> opt = _setup(options, _setup_static(options), data_source::static_data, false);
-        opt["testSuites"] =  options.get_test_suites();
-
-        return _generate(method, opt);
+        session_data data = options.get_session_data(model, method, _genserver);
+        data.set_connection_details(_cert_path.string(), _pkey_path.string(), _ca_path.string(), _curl_handle);
+        data.connection.request_type = "requestData";
+        
+        return _generate(data);
     }
         
 private:
-
-    static size_t _curl_data_callback(void *data, size_t size, size_t nmemb, void *userp) {
-        auto callback = static_cast<std::function<size_t(void *data, size_t size, size_t nmemb)>*>(userp);
-
-        return callback->operator()(data, size, nmemb);
-    }
 
     std::string _get_key_store(std::string keystore_path = "") {
 
@@ -2076,124 +2213,32 @@ private:
         }
     }
 
-    std::map<std::string, std::any> _setup_nwise(ecfeed::params_nwise& options) {
-        std::map<std::string, std::any> properties;
+    std::shared_ptr<test_queue<std::string>> _export(session_data& data) {
 
-        properties["n"] = options.get_n();
-        properties["coverage"] = options.get_coverage();
+      std::shared_ptr<test_queue<std::string>> result(new test_queue<std::string>(data));
 
-        return properties;
-    }
+      std::function<size_t(void *data, size_t size, size_t nmemb)> data_cb = [result](void *data, size_t size, size_t nmemb) -> size_t {
 
-    std::map<std::string, std::any> _setup_pairwise(ecfeed::params_pairwise& options) {
-        std::map<std::string, std::any> properties;
-
-        properties["coverage"] = options.get_coverage();
-
-        return properties;
-    }
-        
-    std::map<std::string, std::any> _setup_random(ecfeed::params_random& options) {
-        std::map<std::string, std::any> properties;
-
-        properties["length"] = options.get_length();
-        properties["duplicates"] = options.get_duplicates();
-        properties["adaptive"] = options.get_adaptive();
-
-        return properties;
-    }
-
-    std::map<std::string, std::any> _setup_cartesian(ecfeed::params_cartesian& options) {
-        std::map<std::string, std::any> properties;
-
-        return properties;
-    }
-
-    std::map<std::string, std::any> _setup_static(ecfeed::params_static& options) {
-        std::map<std::string, std::any> properties;
-
-        return properties;
-    }
-
-    std::map<std::string, std::any> _setup(params_common_getter& options, std::map<std::string, std::any> properties, data_source source, bool format) {
-        std::map<std::string, std::any> opt;
-
-        if (options.get_constraints().type() == typeid(std::string)) {
-            if (std::any_cast<std::string>(options.get_constraints()) != "ALL") {
-                opt["constraints"] =  options.get_constraints();
-            }
-        } else {
-            opt["constraints"] =  options.get_constraints();
+        if (nmemb > 0) {
+          std::string test((char*) data, (char*) data + nmemb - 1);
+          result->insert(test);
         }
 
-        if (options.get_choices().type() == typeid(std::string)) {
-            if (std::any_cast<std::string>(options.get_choices()) != "ALL") {
-                opt["choices"] =  options.get_choices();
-            }
-        } else {
-            opt["choices"] =  options.get_choices();
-        }
+        return nmemb;
+      };
 
-        opt["dataSource"] = source;
-        opt["properties"] = properties;
+      _running_requests.push_back(std::async(std::launch::async, [data, result, data_cb, this]() {
+        request::perform_request_stream(data, &data_cb);
+        result->finish();
+      }));
 
-        if (format) {
-            opt["template"] = options.get_template_type();
-        }
-
-        return opt;
+      return result;
     }
 
-    void _perform_request(const std::string& url, const std::function<size_t(void *data, size_t size, size_t nmemb)>* data_callback) {
-        char error_buf[128];
-        curl_easy_setopt(_curl_handle, CURLOPT_SSLCERT, _cert_path.string().c_str());
-        curl_easy_setopt(_curl_handle, CURLOPT_SSLCERTTYPE, "pem");
-        curl_easy_setopt(_curl_handle, CURLOPT_SSLKEY, _pkey_path.string().c_str());
-        curl_easy_setopt(_curl_handle, CURLOPT_CAINFO, _ca_path.string().c_str());
-        curl_easy_setopt(_curl_handle, CURLOPT_BUFFERSIZE, 8);
-
-        curl_easy_setopt(_curl_handle, CURLOPT_WRITEFUNCTION, _curl_data_callback);
-        curl_easy_setopt(_curl_handle, CURLOPT_WRITEDATA, (void *)data_callback);
-
-        curl_easy_setopt(_curl_handle, CURLOPT_ERRORBUFFER, error_buf);
-
-        curl_easy_setopt(_curl_handle, CURLOPT_URL, url.c_str());
-
-        auto success = curl_easy_perform(_curl_handle);
-
-        if (success != 0) {
-            std::cout << error_buf << std::endl;
-        }
-
-    }
-
-    std::shared_ptr<test_queue<std::string>> _export(const std::string& method, std::map<std::string, std::any>& options) {
-        auto url = _build_export_url(method, options);
-        std::shared_ptr<test_queue<std::string>> result(new test_queue<std::string>());
-
-        std::function<size_t(void *data, size_t size, size_t nmemb)> data_cb = [result](void *data, size_t size, size_t nmemb) -> size_t {
-
-            if (nmemb > 0) {
-                std::string test((char*) data, (char*) data + nmemb - 1);
-                result->insert(test);
-            }
-
-            return nmemb;
-        };
-
-        _running_requests.push_back(std::async(std::launch::async, [result, url, data_cb, this]() {
-            _perform_request(url, &data_cb);
-            result->finish();
-        }));
-
-        return result;
-    }
-
-    std::shared_ptr<test_queue<test_arguments>> _generate(const std::string& method, std::map<std::string, std::any>& options) {
-        auto url = _build_generate_url(method, options);
+    std::shared_ptr<test_queue<test_arguments>> _generate(session_data& session_data) {
 
         std::vector<std::string> types;
-        std::shared_ptr<test_queue<test_arguments>> result(new test_queue<test_arguments>());
+        std::shared_ptr<test_queue<test_arguments>> result(new test_queue<test_arguments>(session_data));
 
         std::function<size_t(void *data, size_t size, size_t nmemb)> data_cb = [this, result](void *data, size_t size, size_t nmemb) -> size_t {
 
@@ -2202,17 +2247,9 @@ private:
 
                 auto [name, value] = _parse_test_line(test);
                 if (name == "info" && value.to_str() != "alive" && !result->_get_method_info_ready()) {
-                    std::string method_signature = value.to_str();
-                    std::replace(method_signature.begin(), method_signature.end(), '\'', '\"');
-
-                    auto [name_1, value_1] = _parse_test_line(method_signature);
-                    if (name_1 == "method") {
-                        if (_parse_method_info(value_1.to_str(), result->_get_method_info())) {
-                            result->_set_method_info_ready();
-                        }
-                    }
+                    _parse_method_header(value.to_str(), result->_get_session_data());
                 } else if (name == "testCase" && result->_get_method_info_ready()) {
-                    result->insert(_parse_test_case(value, result->_get_method_info()));
+                    result->insert(_parse_test_case(value, result->_get_session_data()));
                 }
 
             }
@@ -2220,9 +2257,9 @@ private:
             return nmemb;
         };
 
-        _running_requests.push_back(std::async(std::launch::async, [result, url, data_cb, this]() {
+        _running_requests.push_back(std::async(std::launch::async, [session_data, result, data_cb, this]() {
 
-            _perform_request(url, &data_cb);
+            request::perform_request_stream(session_data, &data_cb);
             result->finish();
         }));
 
@@ -2297,81 +2334,39 @@ private:
         }
 
         return result;
-    }
+    } 
 
-    std::string _build_export_url(const std::string& method, std::map<std::string, std::any>& options) {
+    void _parse_method_header(std::string line, session_data& session_data) {
+      std::replace(line.begin(), line.end(), '\'', '\"');
 
-        if (options.count("template") > 0 && std::any_cast<template_type>(options["template"]) == template_type::raw) {
-            options.erase("template");
-            return _build_request_url(method, "requestData", options);
-        }
-            
-        return _build_request_url(method, "requestExport", options);
-    }
+      picojson::value v;
+      std::string err = picojson::parse(v, line);
+      
+      if (false == err.empty()) {
+        std::cerr << "Cannot parse method header line '" << line << "': " << err << std::endl;
+        return;
+      }
 
-    std::string _build_generate_url(const std::string& method, std::map<std::string, std::any>& options) {
-
-        if (options.count("template") > 0) {
-            std::cerr << "Unexpected option: template\n";
-            options.erase("template");
-        }
-
-        return _build_request_url(method, "requestData", options);
-    }
-
-    std::string _build_request_url(const std::string& method, const std::string& request_type, std::map<std::string, std::any>& opt) {
-        std::string url;
-
-        url += "https://" + _genserver + "/testCaseService";
-        url += "?requestType=" + request_type;
-        url += "&client=cpp";
-        url += "&request={\"method\":\"" + method + "\"";
-
-        if (opt.count("model") == 0) {
-            url += ",\"model\":\"" + model + "\"";
-        } else {
-            url += ",\"model\":\"" + std::any_cast<std::string>(opt["model"]) + "\"";
-            opt.erase("model");
-        }
-
-        if (opt.count("template") > 0) {
-            url += ",\"template\":\"" + template_type_url_param(std::any_cast<template_type>(opt["template"])) + "\"";
-            opt.erase("template");
-        } else if (request_type == "requestExport") {
-            url += ",\"template\":\"CSV\"";
-        }
-
-        if (opt.size() != 0) {
-            url += ",\"userData\":\"{";
-            std::string padding = "";
-
-            for (const std::pair<std::string, std::any>& option : opt) {
-                url += padding + _serializer.serialize(option);
-                padding = ",";
-            }
-
-            url += "}\"";
-        }
-
-        url += "}";
+      if (v.is<picojson::object>()) {
 
         try {
-            url = std::regex_replace(url, std::regex("\\\""), "%22");
-            url = std::regex_replace(url, std::regex("'"),  "%27");
-            url = std::regex_replace(url, std::regex("\\{"),  "%7B");
-            url = std::regex_replace(url, std::regex("\\}"),  "%7D");
-            url = std::regex_replace(url, std::regex("\\["),  "%5B");
-            url = std::regex_replace(url, std::regex("\\]"),  "%5D");
-        } catch (const std::regex_error& e) {
-            std::cerr << e.what() << std::endl;
+          session_data.internal.method_name_qualified = v.get<picojson::object>()["method"].to_str();
+          session_data.internal.test_session_id = v.get<picojson::object>()["testSessionId"].to_str();
+          session_data.internal.timestamp = v.get<picojson::object>()["timestamp"].to_str();
+
+          _parse_method_info(session_data.internal.method_name_qualified, session_data);
+
+        } catch(const std::exception& e) {
+          std::cerr << "Exception caught: " << e.what() << ". The method header does not contain critical information: " << line << std::endl;
         }
 
-        // std::cout << "url:" << url << std::endl;
+      } else {
+        std::cerr << "Error: method header should be a JSON object" << std::endl;
+      }
 
-        return url;
     }
 
-    bool _parse_method_info(const std::string& line, method_info& method_info) {
+    void _parse_method_info(const std::string& line, session_data& session_data) {
         auto begin = line.find_first_of("(");
         auto end = line.find_last_of(")");
         auto args = line.substr(begin + 1, end - begin - 1);
@@ -2383,16 +2378,17 @@ private:
             token = token.substr(token.find_first_not_of(" "));
             std::string arg_type = token.substr(0, token.find(" "));
             std::string arg_name = token.substr(token.find(" ") + 1);
-            method_info.arg_names.push_back(arg_name);
-            method_info.arg_types.push_back(arg_type);
+            session_data.internal.arg_names.push_back(arg_name);
+            session_data.internal.arg_types.push_back(arg_type);
         }
 
-        return true;
+        session_data.internal.method_info_ready = true;
     }
 
-    test_arguments _parse_test_case(picojson::value test, method_info& method_info) {
-        test_arguments result;
-
+    test_arguments _parse_test_case(picojson::value test, session_data& session_data) {
+        test_handle* _test_handle = new test_handle(session_data, test.serialize(), "0:" + std::to_string(session_data.feedback.test_cases_total)); 
+        test_arguments _test_arguments(_test_handle);
+        
         if (test.is<picojson::array>()) {
             auto test_array = test.get<picojson::array>();
             unsigned arg_index = 0;
@@ -2401,20 +2397,21 @@ private:
                     
                 try {                    
                     std::string value = element.get<picojson::object>()["value"].to_str();
-                    result.add(method_info.arg_names[arg_index], method_info.arg_types[arg_index], value);
+                    _test_arguments.add(session_data.internal.arg_names[arg_index], session_data.internal.arg_types[arg_index], value);
                 } catch(const std::exception& e) {
                     std::cerr << "Exception caught: " << e.what() << ". Too many parameters in the test: " << test.to_str() << std::endl;
                 }
 
                 arg_index++;
             }
+
         }
 
         if (! test.is<picojson::array>()) {
             std::cerr << "Error: test case should be a JSON array" << std::endl;
         }
 
-        return result;
+        return _test_arguments;
     }
 
     std::tuple<std::string, picojson::value> _parse_test_line(std::string line) {
@@ -2443,22 +2440,550 @@ private:
     }
 };
 
-inline std::ostream& operator<<(std::ostream& os, const argument& argument) {
+inline std::string _show_properties(const session_data& session_data) {
+  
+  return "Properties: \n" +
+    parser::append_string_debug("  - n: ", session_data.process_property("n")) +
+    parser::append_string_debug("  - coverage: ", session_data.process_property("coverage")) +
+    parser::append_string_debug("  - length: ", session_data.process_property("length")) +
+    parser::append_string_debug("  - duplicates: ", session_data.process_property("duplicates")) +
+    parser::append_string_debug("  - adaptive: ", session_data.process_property("adaptive"));
+}
 
-    os << argument.type << " " << argument.name << " = " << argument.value << "; ";
+inline std::string _show_feedback(const session_data& session_data) {
+  
+  auto results =  std::string("Feedback: \n") +
+    parser::append_string_debug("  - test cases total: ", parser::process_number(session_data.feedback.test_cases_total)) +
+    parser::append_string_debug("  - test cases parsed: ", parser::process_number(session_data.feedback.test_cases_parsed)) +
+    parser::append_string_debug("  - transmission: ", parser::process_string(session_data.feedback.transmission_finished ? "finished" : "pending")) +
+    parser::append_string_debug("  - handlers: ", parser::process_number(session_data.feedback.test_results.size()));
+
+    for (auto const& [key, val] : session_data.feedback.test_results) { 
+      results += key + " - "; 
+
+      std::ostringstream ss;
+      ss << *(std::any_cast<ecfeed::test_handle*>(val));
+
+      results += ss.str();
+    }
+
+    return results;
+}
+
+inline std::string _show_internal(const session_data& session_data) {
+
+  auto results = std::string("Internal: \n") +
+    parser::append_string_debug("  - framework: ", parser::process_string(session_data.internal.framework)) +
+    parser::append_string_debug("  - qualified method name: ", parser::process_string(session_data.internal.method_name_qualified)) +
+    parser::append_string_debug("  - test session id: ", parser::process_string(session_data.internal.test_session_id)) +
+    parser::append_string_debug("  - timestamp: ", parser::process_string(session_data.internal.timestamp)) +
+    parser::append_string_debug("  - method header parsed: ", parser::process_string(session_data.internal.method_info_ready  ? "yes" : "no")) +
+    parser::append_string_debug("  - method argument names: ", parser::process_vector(session_data.internal.arg_names)) +
+    parser::append_string_debug("  - method argument types: ", parser::process_vector(session_data.internal.arg_types));
+
+  return results;
+}
+
+inline std::string _show_main(const session_data& session_data) {
+
+  auto results = std::string("SESSION DATA: \n") +
+    parser::append_string_debug("  - model: ", parser::process_string(session_data.model)) +
+    parser::append_string_debug("  - method: ", parser::process_string(session_data.method_name)) +
+    parser::append_string_debug("  - algorithm: ", parser::process_string(data_source_url_param(session_data.data_source))) +
+    parser::append_string_debug("  - template: ", session_data.process_template()) +
+    parser::append_string_debug("  - label: ", session_data.process_test_session_label()) +
+    parser::append_string_debug("  - custom: ", session_data.process_custom()) +
+    parser::append_string_debug("  - constraints: ", session_data.process_constraints()) +
+    parser::append_string_debug("  - test suites: ", session_data.process_test_suites()) +
+    parser::append_string_debug("  - choices: ", session_data.process_choices());
+
+  return results;
+}
+
+inline std::string _show_connection(const session_data& session_data) {
+  
+  return std::string("Connection: \n") +
+    parser::append_string_debug("  - generator address: ", parser::process_string(session_data.connection.generator_address)) +
+    parser::append_string_debug("  - request type: ", parser::process_string(session_data.connection.request_type)) +
+    parser::append_string_debug("  - path - cert: ", parser::process_string(session_data.connection.cert_path)) +
+    parser::append_string_debug("  - path - key: ", parser::process_string(session_data.connection.pkey_path)) +
+    parser::append_string_debug("  - path - ca: ", parser::process_string(session_data.connection.ca_path));
+}
+
+inline std::ostream& operator<<(std::ostream& os, const session_data& session_data) {
+    os << _show_main(session_data);
+    os << _show_properties(session_data);
+    os << _show_internal(session_data);
+    os << _show_connection(session_data);
+    os << _show_feedback(session_data);
 
     return os;
+}
+
+inline std::ostream& operator<<(std::ostream& os, const argument& argument) {
+
+  os << argument.type << " " << argument.name << " = " << argument.value << "; ";
+    
+  return os;
 }
 
 inline std::ostream& operator<<(std::ostream& os, const test_arguments& test_arguments) {
         
     os << "size: " << test_arguments.get_size() << " | ";
 
-    for (auto &x : test_arguments.get_vector()) {
+    for (auto& x : test_arguments.get_vector()) {
         os << x;
     }
 
     return os;
+}
+
+inline std::ostream& operator<<(std::ostream& os, const test_handle& test_handle) {
+    os << "Handler:" << std::endl;
+    os << parser::append_string_debug("  - processed: ", parser::process_string(test_handle._pending ? "false" : "true"));
+    os << parser::append_string_debug("  - data: ", parser::process_string(test_handle._data));
+    os << parser::append_string_debug("  - id: ", parser::process_string(test_handle._id));
+    os << parser::append_string_debug("  - status: ", parser::process_string(test_handle._status));
+    os << parser::append_string_debug("  - duration: ", parser::process_number(test_handle._duration));
+    os << parser::append_string_debug("  - comment: ", parser::process_string(test_handle._comment));
+    os << parser::append_string_debug("  - custom: ", parser::process_map(test_handle._custom));
+
+    return os;
+}
+
+//----------------------------------------------------------------------------------------------
+
+size_t request::curl_data_callback(void *data, size_t size, size_t nmemb, void *userp) {
+  auto callback = static_cast<std::function<size_t(void *data, size_t size, size_t nmemb)>*>(userp);
+
+  return callback->operator()(data, size, nmemb);
+}
+
+std::string request::generate_request_url_stream_parameter(const session_data& session_data) {
+   picojson::object request;
+
+    std::optional<picojson::value> schema = session_data.process_template();
+    if (schema) {
+      parser::append_json(request, "template", schema);
+    } else if (session_data.connection.request_type == "requestExport") {
+      parser::append_json(request, "template", parser::process_string("CSV"));
+    }
+        
+    parser::append_json(request, "method", parser::process_string(session_data.method_name));
+    parser::append_json(request, "model", parser::process_string(session_data.model));
+
+    picojson::object user_data;
+    parser::append_json(user_data, "dataSource", parser::process_string(data_source_url_param(session_data.data_source)));;
+    parser::append_json(user_data, "choices", session_data.process_choices());
+    parser::append_json(user_data, "constraints", session_data.process_constraints());
+    parser::append_json(user_data, "testSuites", session_data.process_test_suites());
+
+    picojson::object properties;
+    parser::append_json(properties, "n", session_data.process_property("n"));
+    parser::append_json(properties, "coverage", session_data.process_property("coverage"));
+    parser::append_json(properties, "length", session_data.process_property("length"));
+    parser::append_json(properties, "duplicates", session_data.process_property("duplicates"));
+    parser::append_json(properties, "adaptive", session_data.process_property("adaptive"));
+
+    user_data["properties"] = picojson::value(properties);
+
+    std::string user_data_string = picojson::value(user_data).serialize();
+    std::replace(user_data_string.begin(), user_data_string.end(), '"', '\'');
+
+    request["userData"] = picojson::value(user_data_string);
+
+std::cerr << picojson::value(request).serialize() << std::endl;
+    return picojson::value(request).serialize();
+}
+
+std::string request::escape_url(const std::string& request) {
+  std::string url = request;
+  
+  try {
+    url = std::regex_replace(url, std::regex("\\\""), "%22");
+    url = std::regex_replace(url, std::regex("'"), "%27");
+    url = std::regex_replace(url, std::regex("\\{"), "%7B");
+    url = std::regex_replace(url, std::regex("\\}"), "%7D");
+    url = std::regex_replace(url, std::regex("\\["), "%5B");
+    url = std::regex_replace(url, std::regex("\\]"), "%5D");
+  } catch (const std::regex_error& e) {
+    std::cerr << e.what() << std::endl;
+  }
+
+  return url;
+}
+
+std::string request::generate_request_url_stream(const session_data& session_data) {
+  std::string url;
+
+  url += "https://" + session_data.connection.generator_address + "/testCaseService";
+  url += "?requestType=" + session_data.connection.request_type;
+  url += "&client=cpp";
+  url += "&request=" + request::generate_request_url_stream_parameter(session_data);
+
+  // std::cerr << "url:" << url << std::endl;
+
+  return request::escape_url(url);
+}
+
+std::string request::generate_request_url_feedback(const session_data& session_data) {
+  std::string url;
+
+  url += "https://" + session_data.connection.generator_address + "/streamFeedback";
+  url += "?client=cpp";
+  url += "&generationId=" + session_data.internal.test_session_id;
+
+  // std::cerr << "url:" << url << std::endl;
+        
+  return request::escape_url(url);
+}
+
+std::string request::generate_request_url_feedback_body(const session_data& session_data) {
+  picojson::object body;
+
+  parser::append_json(body, "testSessionId", parser::process_string(session_data.internal.test_session_id));
+  parser::append_json(body, "modelId", parser::process_string(session_data.model));
+  parser::append_json(body, "methodInfo", parser::process_string(session_data.internal.method_name_qualified));
+  parser::append_json(body, "framework", parser::process_string(session_data.internal.framework));
+  parser::append_json(body, "timestamp", parser::process_number(std::stod(session_data.internal.timestamp)));
+  parser::append_json(body, "generatorType", parser::process_string(data_source_url_param(session_data.data_source)));
+  
+  parser::append_json(body, "generatorOptions", session_data.process_gen_options());
+  parser::append_json(body, "testSessionLabel", session_data.process_test_session_label());
+  parser::append_json(body, "constraints", session_data.process_constraints());
+  parser::append_json(body, "testSuites", session_data.process_test_suites());
+  parser::append_json(body, "custom", session_data.process_custom());
+  parser::append_json(body, "choices", session_data.process_choices());
+  parser::append_json(body, "testResults", session_data.process_test_results());
+
+  return picojson::value(body).serialize();
+}
+
+void request::process_feedback(session_data& session_data) {
+
+  if (session_data.feedback.test_cases_parsed == session_data.feedback.test_cases_total && session_data.feedback.transmission_finished) {
+
+    request::perform_request_feedback(session_data);
+
+    for (auto const& [key, val] : session_data.feedback.test_results) { 
+      auto index = std::any_cast<ecfeed::test_handle*>(val);
+      delete index;
+      index = nullptr;
+    }
+  }
+}
+
+void request::perform_request_feedback(const ecfeed::session_data& session_data) {
+  char error_buf[128];
+
+  std::string url = request::generate_request_url_feedback(session_data);
+  std::string body = request::generate_request_url_feedback_body(session_data);
+
+  std::cerr << body << std::endl << std::endl;
+
+  struct curl_slist *headers = NULL;
+  headers = curl_slist_append(headers, "Accept: application/json");
+  headers = curl_slist_append(headers, "Content-Type: application/json");
+  headers = curl_slist_append(headers, "Content-Type: application/json; charset=utf-8");
+  curl_easy_setopt(session_data.connection.curl_handle, CURLOPT_HTTPHEADER, headers); 
+
+  curl_easy_setopt(session_data.connection.curl_handle, CURLOPT_SSLCERT, session_data.connection.cert_path.c_str());
+  curl_easy_setopt(session_data.connection.curl_handle, CURLOPT_SSLCERTTYPE, "pem");
+  curl_easy_setopt(session_data.connection.curl_handle, CURLOPT_SSLKEY, session_data.connection.pkey_path.c_str());
+  curl_easy_setopt(session_data.connection.curl_handle, CURLOPT_CAINFO, session_data.connection.ca_path.c_str());
+  curl_easy_setopt(session_data.connection.curl_handle, CURLOPT_BUFFERSIZE, 8);
+
+  curl_easy_setopt(session_data.connection.curl_handle, CURLOPT_ERRORBUFFER, error_buf);
+
+  curl_easy_setopt(session_data.connection.curl_handle, CURLOPT_URL, url.c_str());
+  curl_easy_setopt(session_data.connection.curl_handle, CURLOPT_CUSTOMREQUEST, "POST");
+  curl_easy_setopt(session_data.connection.curl_handle, CURLOPT_POSTFIELDS, body.c_str());
+
+  auto success = curl_easy_perform(session_data.connection.curl_handle);
+
+  if (success != 0) {
+    std::cout << error_buf << std::endl;
+  }
+
+}
+
+void request::perform_request_stream(const ecfeed::session_data& session_data, const std::function<size_t(void *data, size_t size, size_t nmemb)>* data_callback) {
+  char error_buf[128];
+
+  std::string url = request::generate_request_url_stream(session_data);
+
+  curl_easy_setopt(session_data.connection.curl_handle, CURLOPT_SSLCERT, session_data.connection.cert_path.c_str());
+  curl_easy_setopt(session_data.connection.curl_handle, CURLOPT_SSLCERTTYPE, "pem");
+  curl_easy_setopt(session_data.connection.curl_handle, CURLOPT_SSLKEY, session_data.connection.pkey_path.c_str());
+  curl_easy_setopt(session_data.connection.curl_handle, CURLOPT_CAINFO, session_data.connection.ca_path.c_str());
+  curl_easy_setopt(session_data.connection.curl_handle, CURLOPT_BUFFERSIZE, 8);
+
+  curl_easy_setopt(session_data.connection.curl_handle, CURLOPT_WRITEFUNCTION, request::curl_data_callback);
+  curl_easy_setopt(session_data.connection.curl_handle, CURLOPT_WRITEDATA, (void *)data_callback);
+
+  curl_easy_setopt(session_data.connection.curl_handle, CURLOPT_ERRORBUFFER, error_buf);
+
+  curl_easy_setopt(session_data.connection.curl_handle, CURLOPT_URL, url.c_str());
+
+  auto success = curl_easy_perform(session_data.connection.curl_handle);
+
+  if (success != 0) {
+    std::cout << error_buf << std::endl;
+  }
+
+}
+
+//----------------------------------------------------------------------------------------------
+
+std::optional<picojson::value> session_data::process_property(const std::string parameter) const {
+  std::optional<picojson::value> box;
+
+  auto field = properties.find(parameter);
+  if (field != properties.end()) {
+    box = picojson::value(std::any_cast<std::string>(field->second));
+  }
+
+  return box;
+}
+
+std::optional<picojson::value> session_data::process_gen_options() const {
+  std::optional<picojson::value> box;
+  std::string body = "";
+
+  std::string delimeter = "";
+  for (auto const& [key, val] : properties) { 
+    body += delimeter + key + "=" + val;
+    delimeter = ", ";
+  }
+
+  return picojson::value(body);
+}
+
+std::optional<picojson::value> session_data::process_test_results() const {
+  std::optional<picojson::value> box;
+
+  picojson::object body;
+  for (auto const& [key, val] : feedback.test_results) { 
+    ecfeed::test_handle* test_handle = std::any_cast<ecfeed::test_handle*>(val);
+
+    picojson::object data;
+
+    parser::append_json(data, "data", parser::process_string(test_handle->_data));
+    parser::append_json(data, "status", parser::process_string(test_handle->_status));
+    parser::append_json(data, "comment", parser::process_string(test_handle->_comment));
+    parser::append_json(data, "duration", parser::process_number(test_handle->_duration));
+    parser::append_json(data, "custom", parser::process_map(test_handle->_custom));
+
+    body[key] = picojson::value(data);
+  }
+
+  return picojson::value(body);
+}
+
+std::optional<picojson::value> session_data::process_test_session_label() const {
+  std::optional<picojson::value> box;
+
+  auto field = main.find("label");
+  if (field != main.end()) {
+    box = picojson::value(std::any_cast<std::string>(field->second));
+  }
+
+  return box;
+}
+
+std::optional<picojson::value> session_data::process_constraints() const {
+  std::optional<picojson::value> box;
+
+  auto field = main.find("constraints");
+  if (field != main.end()) {
+    
+    try {
+      std::string value = std::any_cast<std::string>(field->second);
+
+      if (value != "" && value != "ALL") {
+        box = picojson::value(value);
+      }
+    } catch(std::bad_any_cast) {
+      box = parser::process_set(std::any_cast<std::set<std::string>>(field->second));
+    }
+  }
+
+  return box;
+}
+
+std::optional<picojson::value> session_data::process_test_suites() const {
+  std::optional<picojson::value> box;
+
+  auto field = main.find("test_suites");
+  if (field != main.end()) {
+    
+    try {
+      std::string value = std::any_cast<std::string>(field->second);
+
+      if (value != "" && value != "ALL") {
+        box = picojson::value(value);
+      }
+    } catch(std::bad_any_cast) {
+      box = parser::process_set(std::any_cast<std::set<std::string>>(field->second));
+    }
+  }
+
+  return box;
+}
+
+std::optional<picojson::value> session_data::process_custom() const {
+  std::optional<picojson::value> box;
+
+  auto field = main.find("custom");
+  if (field != main.end()) {
+    box = parser::process_map(std::any_cast<std::map<std::string, std::string>>(field->second));
+  }
+
+  return box;
+}
+
+std::optional<picojson::value> session_data::process_choices() const {
+  std::optional<picojson::value> box;
+  
+  auto field = main.find("choices");
+  if (field != main.end()) {
+    
+    try {
+      std::string value = std::any_cast<std::string>(field->second);
+
+      if (value != "" && value != "ALL") {
+        box = picojson::value(value);
+      }
+    } catch(std::bad_any_cast) {
+      picojson::object parser;
+        
+      for (auto x : std::any_cast<std::map<std::string, std::set<std::string>>>(field->second)) {
+        parser::append_json(parser, x.first, parser::process_set(x.second));
+      }
+        
+      box = picojson::value(parser);
+    }
+  }
+
+  return box;
+}
+
+std::optional<picojson::value> session_data::process_template() const {
+  std::optional<picojson::value> box;
+
+  auto field = main.find("template");
+  if (field != main.end()) {
+    box = picojson::value(template_type_url_param(std::any_cast<ecfeed::template_type>(field->second)));
+  }
+
+  return box;
+}
+
+void session_data::set_connection_details(const std::string& cert_path, const std::string& pkey_path, const std::string& ca_path, CURL* curl_handle) {
+  connection.cert_path = cert_path;
+  connection.pkey_path = pkey_path;
+  connection.ca_path = ca_path;
+  connection.curl_handle = curl_handle;
+}
+
+//----------------------------------------------------------------------------------------------
+
+template<typename T>
+std::optional<picojson::value> parser::process_number(const T value) {
+  std::optional<picojson::value> box;
+
+  if (value > 0) {
+    box = picojson::value(static_cast<double>(value));
+  }
+
+  return box;
+}
+
+std::optional<picojson::value> parser::process_string(const std::string& value) {
+  std::optional<picojson::value> box;
+
+  if (value != "") {
+    box = picojson::value(value);
+  }
+
+  return box;
+}
+
+std::optional<picojson::value> parser::process_set(const std::set<std::string>& value) {
+  std::optional<picojson::value> box;
+  std::vector<picojson::value> parser;
+      
+  if (value.size() > 0) {
+    
+    for (auto x : value) {
+      parser.push_back(picojson::value(x));
+    }
+  
+    box = picojson::value(parser);
+  }
+      
+  return box;
+}
+
+std::optional<picojson::value> parser::process_vector(const std::vector<std::string>& value) {
+  std::optional<picojson::value> box;
+  std::vector<picojson::value> parser;
+      
+  if (value.size() > 0) {
+    
+    for (auto x : value) {
+      parser.push_back(picojson::value(x));
+    }
+  
+    box = picojson::value(parser);
+  }
+      
+  return box;
+}
+
+std::optional<picojson::value> parser::process_map(const std::map<std::string, std::string>& value) {
+  std::optional<picojson::value> box;
+  
+  if (value.size() > 0) {
+    picojson::object parser;
+
+    for (auto const& [key, val] : value) { 
+      parser[key] = picojson::value(val);
+    }
+
+    box = picojson::value(parser);
+  }
+
+  return box;
+}
+
+std::string parser::append_string_debug(std::string appendix, std::optional<picojson::value> box) {
+
+  if (box) {
+    return appendix + box.value().serialize() + "\n";
+  } else {
+    return appendix + "-\n";
+  }
+}
+
+std::string parser::append_string_request(std::string key, std::optional<picojson::value> box) {
+
+  if (box) {
+    picojson::object body;
+    body[key] = box.value();
+    return picojson::value(body).serialize();
+  } else {
+    return "";
+  }
+}
+
+picojson::object& parser::append_json(picojson::object& json, std::string field, std::optional<picojson::value> box) {
+  
+  if (box) {
+    json[field] = box.value();
+  }
+
+  return json;
 }
 
 }
