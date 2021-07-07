@@ -14,7 +14,7 @@ The ecFeed library can be found online in the [Conan Center](https://conan.io/ce
 
 ## Examples
 
-Methods, used in the tutorial, are included the welcome model, created during the account registration process. If the model is missing, e.g. it has been deleted by the user, it can be downloaded from [here](https://s3-eu-west-1.amazonaws.com/resources.ecfeed.com/repo/tutorial/Welcome.ect).  
+Methods, used in the tutorial, are included the welcome model, which was created during the account registration process. If the model is missing, e.g. it has been deleted by the user, it can be downloaded from [here](https://s3-eu-west-1.amazonaws.com/resources.ecfeed.com/repo/tutorial/Welcome.ect).  
 
 ```cpp
 #include "ecfeed.hpp"
@@ -34,7 +34,7 @@ int main() {
 }
 ```
 
-Note, that the C++ runner requires additional libraries: 'libcurl' and 'openssl'. They can be installed on the system or downloaded from a remote package manager, for example [Conan Center](https://conan.io/center/). A sample 'conanfile.txt' might look as follows:
+Note, that the C++ runner requires additional libraries, namely 'libcurl' and 'openssl'. They can be installed on the system or downloaded from a remote package manager, for example [Conan Center](https://conan.io/center/). A sample 'conanfile.txt' might look as follows:
 
 ```
 [requires]
@@ -68,8 +68,7 @@ target_link_libraries(ecfeed CONAN_PKG::libcurl CONAN_PKG::libcurl)
 target_link_libraries(ecfeed CONAN_PKG::openssl CONAN_PKG::openssl)
 ```
 
-Do not hesitate to experiment with the code and modify the welcome mode. It can be recreated easily and there is no better way to learn than hands-on exercises.  
-<br/>
+Do not hesitate to experiment with the code and modify the welcome model.    
 
 Also, have in mind that the ID of each model (including the welcome model) is unique. If you want to copy and paste the above example, be sure to update it accordingly.
 
@@ -146,7 +145,7 @@ test_suite* init_unit_test_suite( int argc, char* argv[] ) {
 To send feedback, you need to have a BASIC account type or be a member of a TEAM.  
 
 An example looks as follows:
-```C++
+```cpp
 #include "gtest/gtest.h"
 #include "ecfeed.hpp"
 
@@ -174,7 +173,7 @@ namespace test_generate {
     }
 ```
 
-In this case, one additional field can be accessed in the 'test_arguments' object, namely 'test_handle'. It contains the following public methods. The required argument denotes the result of the test, everything else is optional.  
+In this case, one additional field can be accessed from the 'test\_arguments' object, namely 'test\_handle' (using the 'get\_handle()' method). It contains the following public methods:  
 
 ```C++
   std::string add_feedback(bool status, int duration = -1, std::string comment = "", std::map<std::string, std::string> custom = std::map<std::string, std::string>());
@@ -182,14 +181,17 @@ In this case, one additional field can be accessed in the 'test_arguments' objec
   std::string add_feedback(bool status, std::string comment, std::map<std::string, std::string> custom);
 ```
 
-_status_ - The result of the test.
-_comment_ - The optional description of the execution.
-_duration_ - The optional execution time in milliseconds.
-_custom_ - The optional map of custom key-value pairs.
+The parameters are as follows:
+- _status_ - The result of the test.
+- _comment_ - The optional test execution description.
+- _duration_ - The optional test execution time (in milliseconds).
+- _custom_ - The optional map of custom key-value pairs.
 
-Note, that each test must return a feedback, regardless whether it has passed or failed. Only the first execution of the 'addFeedback' takes effect. All subsequent executions are neglected. 
+Note, that each test execution must return a feedback, regardless whether it has passed or failed. Only the first execution of the 'add\_feedback' method takes effect.  
 
 Additionally, to the test generation method one optional argument can be added, namely 'label'. It provides a short description of the generated test suite.  
+
+After successfully sending the execution feedback, it can be accessed (and analyzed) through the website.
 
 # test_provider class API
 
@@ -199,7 +201,7 @@ The library provides connectivity with the ecFeed test generation service using 
 
 The 'test\_provider' constructor takes one required and three optional parameters. If they are not provided, default values are used (which, for the vast majority of cases, are sufficient).  
 
-- *model* - The model ID. It is a 20 digit number (grouped by 4) that can be found in the 'My projects' page at 'ecfeed.com'. It can be also found in the URL of the model editor page.
+- *model* - The model ID. It is a 20 digit number (grouped by 4) that can be found in the 'my projects' section on the 'ecfeed.com' page. It can be also found in the URL of the model editor page.
 ```cpp
 ecfeed::test_provider testProvider("XXXX-XXXX-XXXX-XXXX-XXXX");
 ```
