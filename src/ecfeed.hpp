@@ -2687,8 +2687,6 @@ void request::perform_request_feedback(const ecfeed::session_data& session_data)
   std::string url = request::generate_request_url_feedback(session_data);
   std::string body = request::generate_request_url_feedback_body(session_data);
 
-  std::cerr << body << std::endl << std::endl;
-
   struct curl_slist *headers = NULL;
   headers = curl_slist_append(headers, "Accept: application/json");
   headers = curl_slist_append(headers, "Content-Type: application/json");
