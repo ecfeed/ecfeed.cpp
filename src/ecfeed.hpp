@@ -2056,6 +2056,7 @@ public:
     test_provider(const std::string& model,
                 const std::filesystem::path& keystore_path = "",
                 const std::string& genserver = "gen.ecfeed.com",
+                
                 const std::string& keystore_password = "changeit") :
         model(model), _genserver(genserver),
         _keystore_password(keystore_password),
@@ -2243,9 +2244,15 @@ private:
         std::function<size_t(void *data, size_t size, size_t nmemb)> data_cb = [this, result](void *data, size_t size, size_t nmemb) -> size_t {
 
             if (nmemb > 0) {
-                std::string test((char*) data, (char*) data + nmemb - 1);
+                std::string test_line((char*) data, (char*) data + nmemb);
 
-                auto [name, value] = _parse_test_line(test);
+                auto [name, value] = _parse_test_line(test_line);
+                
+                if (name == "error") {
+                    std::cerr << std::endl << "ERROR: " << value.to_str() << std::endl << std::endl;
+                    return 0;
+                }
+                
                 if (name == "info" && value.to_str() != "alive" && !result->_get_method_info_ready()) {
                     _parse_method_header(value.to_str(), result->_get_session_data());
                 } else if (name == "testCase" && result->_get_method_info_ready()) {
@@ -2554,6 +2561,7 @@ inline std::ostream& operator<<(std::ostream& os, const test_handle& test_handle
 //----------------------------------------------------------------------------------------------
 
 size_t request::curl_data_callback(void *data, size_t size, size_t nmemb, void *userp) {
+	
   auto callback = static_cast<std::function<size_t(void *data, size_t size, size_t nmemb)>*>(userp);
 
   return callback->operator()(data, size, nmemb);
@@ -2674,7 +2682,7 @@ void request::process_feedback(session_data& session_data) {
 }
 
 void request::perform_request_feedback(const ecfeed::session_data& session_data) {
-  char error_buf[128];
+  char error_buf[CURL_ERROR_SIZE];
 
   std::string url = request::generate_request_url_feedback(session_data);
   std::string body = request::generate_request_url_feedback_body(session_data);
@@ -2699,16 +2707,16 @@ void request::perform_request_feedback(const ecfeed::session_data& session_data)
   curl_easy_setopt(session_data.connection.curl_handle, CURLOPT_CUSTOMREQUEST, "POST");
   curl_easy_setopt(session_data.connection.curl_handle, CURLOPT_POSTFIELDS, body.c_str());
 
-  auto success = curl_easy_perform(session_data.connection.curl_handle);
+  auto result = curl_easy_perform(session_data.connection.curl_handle);
 
-  if (success != 0) {
-    std::cout << error_buf << std::endl;
+  if (result != CURLE_OK) {
+    std::cerr << error_buf << std::endl;
   }
 
 }
 
 void request::perform_request_stream(const ecfeed::session_data& session_data, const std::function<size_t(void *data, size_t size, size_t nmemb)>* data_callback) {
-  char error_buf[128];
+  char error_buf[CURL_ERROR_SIZE];
 
   std::string url = request::generate_request_url_stream(session_data);
 
@@ -2725,10 +2733,10 @@ void request::perform_request_stream(const ecfeed::session_data& session_data, c
 
   curl_easy_setopt(session_data.connection.curl_handle, CURLOPT_URL, url.c_str());
 
-  auto success = curl_easy_perform(session_data.connection.curl_handle);
+  auto result = curl_easy_perform(session_data.connection.curl_handle);
 
-  if (success != 0) {
-    std::cout << error_buf << std::endl;
+  if (result != CURLE_OK) {
+    std::cerr << error_buf << std::endl;
   }
 
 }
