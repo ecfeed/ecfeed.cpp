@@ -1336,6 +1336,7 @@ class request {
   static size_t curl_data_callback(void *data, size_t size, size_t nmemb, void *userp);
 public:
   static void process_feedback(session_data& session_data);
+  static size_t request_feedback_cb(void *contents, size_t size, size_t nmemb, void *userp);
   static void perform_request_feedback(const ecfeed::session_data& session_data);
   static void perform_request_stream(const ecfeed::session_data& session_data, const std::function<size_t(void *data, size_t size, size_t nmemb)>* data_callback);
 };
@@ -2056,7 +2057,6 @@ public:
     test_provider(const std::string& model,
                 const std::filesystem::path& keystore_path = "",
                 const std::string& genserver = "gen.ecfeed.com",
-                
                 const std::string& keystore_password = "changeit") :
         model(model), _genserver(genserver),
         _keystore_password(keystore_password),
@@ -2220,7 +2220,9 @@ private:
 
       std::function<size_t(void *data, size_t size, size_t nmemb)> data_cb = [result](void *data, size_t size, size_t nmemb) -> size_t {
 
-        if (nmemb > 0) {
+        if (nmemb > 0) {  
+			
+		  // TODO add error parsing
           std::string test((char*) data, (char*) data + nmemb - 1);
           result->insert(test);
         }
@@ -2249,7 +2251,7 @@ private:
                 auto [name, value] = _parse_test_line(test_line);
                 
                 if (name == "error") {
-                    std::cerr << std::endl << "ERROR: " << value.to_str() << std::endl << std::endl;
+                    std::cerr << std::endl << "ERROR: " << std::endl << value.to_str() << std::endl << std::endl;
                     return 0;
                 }
                 
@@ -2258,7 +2260,6 @@ private:
                 } else if (name == "testCase" && result->_get_method_info_ready()) {
                     result->insert(_parse_test_case(value, result->_get_session_data()));
                 }
-
             }
 
             return nmemb;
@@ -2681,9 +2682,48 @@ void request::process_feedback(session_data& session_data) {
   }
 }
 
+size_t request::request_feedback_cb(void *contents, size_t size, size_t nmemb, void *userp)
+{
+	std::cerr << std::endl  << "FEEDBACK ERROR: " << std::endl;
+	
+	std::string line((char*) contents, (char*) contents + nmemb);
+	
+	picojson::value v;
+	std::string err = picojson::parse(v, line);
+	
+	if (!err.empty()) {
+		std::cerr << line << std::endl;
+		return 0;
+	}
+	
+	if (! v.is<picojson::object>()) {
+		std::cerr << line << std::endl;
+		return 0;
+	}
+	
+	const picojson::value::object& obj = v.get<picojson::object>();
+	 
+	if (obj.size() <= 0) {
+	  std::cerr << line << std::endl;
+	  return 0;
+	}
+
+    auto value = *obj.begin();
+    
+	if (value.first  != "error") {
+		std::cerr << line << std::endl;
+		return 0;
+	}
+	
+	std::cerr << value.second.to_str() << std::endl <<  std::endl; 
+	return 0;
+}
+ 
 void request::perform_request_feedback(const ecfeed::session_data& session_data) {
   char error_buf[CURL_ERROR_SIZE];
 
+  curl_easy_reset(session_data.connection.curl_handle);
+  
   std::string url = request::generate_request_url_feedback(session_data);
   std::string body = request::generate_request_url_feedback_body(session_data);
 
@@ -2699,14 +2739,15 @@ void request::perform_request_feedback(const ecfeed::session_data& session_data)
   curl_easy_setopt(session_data.connection.curl_handle, CURLOPT_CAINFO, session_data.connection.ca_path.c_str());
   curl_easy_setopt(session_data.connection.curl_handle, CURLOPT_BUFFERSIZE, 8);
 
+  curl_easy_setopt(session_data.connection.curl_handle, CURLOPT_WRITEFUNCTION, request::request_feedback_cb);
   curl_easy_setopt(session_data.connection.curl_handle, CURLOPT_ERRORBUFFER, error_buf);
 
   curl_easy_setopt(session_data.connection.curl_handle, CURLOPT_URL, url.c_str());
   curl_easy_setopt(session_data.connection.curl_handle, CURLOPT_CUSTOMREQUEST, "POST");
   curl_easy_setopt(session_data.connection.curl_handle, CURLOPT_POSTFIELDS, body.c_str());
-
+  
   auto result = curl_easy_perform(session_data.connection.curl_handle);
-
+  
   if (result != CURLE_OK) {
     std::cerr << error_buf << std::endl;
   }
@@ -2716,6 +2757,7 @@ void request::perform_request_feedback(const ecfeed::session_data& session_data)
 void request::perform_request_stream(const ecfeed::session_data& session_data, const std::function<size_t(void *data, size_t size, size_t nmemb)>* data_callback) {
   char error_buf[CURL_ERROR_SIZE];
 
+  curl_easy_reset(session_data.connection.curl_handle);
   std::string url = request::generate_request_url_stream(session_data);
 
   curl_easy_setopt(session_data.connection.curl_handle, CURLOPT_SSLCERT, session_data.connection.cert_path.c_str());
