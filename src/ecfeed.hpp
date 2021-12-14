@@ -2220,11 +2220,45 @@ private:
 
       std::function<size_t(void *data, size_t size, size_t nmemb)> data_cb = [result](void *data, size_t size, size_t nmemb) -> size_t {
 
-        if (nmemb > 0) {  
+        if (nmemb > 0) {
 			
-		  // TODO add error parsing
-          std::string test((char*) data, (char*) data + nmemb - 1);
-          result->insert(test);
+          std::string line((char*) data, (char*) data + nmemb);
+          line.erase(std::remove(line.begin(), line.end(), '\n'), line.end()); // trim
+          
+          // Data line is in plain text. Error line is in JSON.
+          
+          picojson::value v;          
+          std::string err = picojson::parse(v, line);
+          
+          if (!err.empty()) {
+			  result->insert(line); // data line
+			  return nmemb;
+          }
+          
+		if (! v.is<picojson::object>()) {
+			  result->insert(line);  // data line
+			  return nmemb;
+		}          
+          
+		const picojson::value::object& obj = v.get<picojson::object>();
+          
+		if (obj.size() <= 0) {
+			  result->insert(line); // data line
+			  return nmemb;
+		}
+	    
+	    auto value = *obj.begin();
+	    
+	    std::string code = value.first;
+	    std::string message = value.second.to_str();
+	    
+	    if (code == "error") { //  error line
+			  std::cerr << std::endl  << "EXPORT ERROR: " << std::endl;
+			  std::cerr << message << std::endl <<  std::endl;
+			  return 0;
+	    }	    
+    	    
+		result->insert(line);
         }
 
         return nmemb;
