@@ -2684,8 +2684,6 @@ void request::process_feedback(session_data& session_data) {
 
 size_t request::request_feedback_cb(void *contents, size_t size, size_t nmemb, void *userp)
 {
-	std::cerr << std::endl  << "FEEDBACK ERROR: " << std::endl;
-	
 	std::string line((char*) contents, (char*) contents + nmemb);
 	
 	picojson::value v;
@@ -2710,13 +2708,21 @@ size_t request::request_feedback_cb(void *contents, size_t size, size_t nmemb, v
 
     auto value = *obj.begin();
     
-	if (value.first  != "error") {
+    std::string code = value.first;
+    std::string message = value.second.to_str();
+    
+    if (code == "status" && message == "END_DATA") {
+		return nmemb;
+    }
+    
+    if (code  != "error") {
 		std::cerr << line << std::endl;
 		return 0;
 	}
 	
-	std::cerr << value.second.to_str() << std::endl <<  std::endl; 
-	return 0;
+    std::cerr << std::endl  << "FEEDBACK ERROR: " << std::endl;
+    std::cerr << message << std::endl <<  std::endl; 
+    return 0;
 }
  
 void request::perform_request_feedback(const ecfeed::session_data& session_data) {
