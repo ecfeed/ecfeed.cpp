@@ -2961,7 +2961,10 @@ std::optional<picojson::value> session_data::process_template() const {
 
   auto field = main.find("template");
   if (field != main.end()) {
-    box = picojson::value(template_type_url_param(std::any_cast<ecfeed::template_type>(field->second)));
+    auto element = std::any_cast<ecfeed::template_type>(field->second);
+    if (element != template_type::raw) {
+      box = picojson::value(template_type_url_param(element);
+    }
   }
 
   return box;
