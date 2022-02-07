@@ -2607,7 +2607,9 @@ std::string request::generate_request_url_stream_parameter(const session_data& s
 
     std::optional<picojson::value> schema = session_data.process_template();
     if (schema) {
-      parser::append_json(request, "template", schema);
+      if ("RAW".compare(schema) != 0) {
+        parser::append_json(request, "template", schema);
+      }
     } else if (session_data.connection.request_type == "requestExport") {
       parser::append_json(request, "template", parser::process_string("CSV"));
     }
@@ -2962,9 +2964,7 @@ std::optional<picojson::value> session_data::process_template() const {
   auto field = main.find("template");
   if (field != main.end()) {
     auto element = std::any_cast<ecfeed::template_type>(field->second);
-    if (element != template_type::raw) {
-      box = picojson::value(template_type_url_param(element));
-    }
+    box = picojson::value(template_type_url_param(element));
   }
 
   return box;
