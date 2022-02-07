@@ -2608,7 +2608,7 @@ std::string request::generate_request_url_stream_parameter(const session_data& s
     std::optional<picojson::value> schema = session_data.process_template();
     if (schema) {
       std::string element = std::string("RAW");
-      if (element.compare(schema.to_str()) != 0) {
+      if (element.compare(schema.value().to_str()) != 0) {
         parser::append_json(request, "template", schema);
       }
     } else if (session_data.connection.request_type == "requestExport") {
