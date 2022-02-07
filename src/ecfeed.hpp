@@ -2667,7 +2667,7 @@ std::string request::generate_request_url_stream(const session_data& session_dat
   url += "&client=cpp";
   url += "&request=" + request::generate_request_url_stream_parameter(session_data);
 
-  url = std::replace( url.begin(), url.end(), ' ', '%20')
+  url = std::replace( url.begin(), url.end(), " ", "%20")
 
   // std::cerr << "url:" << url << std::endl;
 
