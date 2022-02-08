@@ -5,16 +5,17 @@
 The following tutorial is an introduction to the C++ runner. Note, that it does not cover the ecFeed basics. Therefore, if you want to learn how to create a sample model and generate a personal keystore, visit the tutorial section on our [webpage](https://ecfeed.com/tutorials).  
 
 Prerequisites:
-- Create a test model on the ecFeed webpage.
+- Download an IDE. For example [VSCode](https://code.visualstudio.com/).
+- Create a test model on the ecFeed webpage (or use the default one).
 - Generate a personal keystore named 'security.p12' and put it in the \~/.ecfeed/ directory (Linux users) or in the \~/ecfeed/ directory (Windows users).  
 
-For the complete documentation check the source directly at [GitHub](https://github.com/ecfeed/ecfeed.java).  
+For the complete documentation check the source directly at [GitHub](https://github.com/ecfeed/ecfeed.cpp).  
 
 The ecFeed library can be found online in the [Conan Center](https://conan.io/center/).  
 
 ## Examples
 
-Methods, used in the tutorial, are included the welcome model, which was created during the account registration process. If the model is missing, e.g. it has been deleted by the user, it can be downloaded from [here](https://s3-eu-west-1.amazonaws.com/resources.ecfeed.com/repo/tutorial/Welcome.ect).  
+Methods, used in the tutorial, are a part of the welcome model, created during the registration process at the 'ecfeed.com' webpage. If the model is missing (e.g. it has been deleted by the user), it can be downloaded from [here](https://s3-eu-west-1.amazonaws.com/resources.ecfeed.com/repo/tutorial/Welcome.ect).
 
 ```cpp
 #include "ecfeed.hpp"
@@ -68,9 +69,9 @@ target_link_libraries(ecfeed CONAN_PKG::libcurl CONAN_PKG::libcurl)
 target_link_libraries(ecfeed CONAN_PKG::openssl CONAN_PKG::openssl)
 ```
 
-Do not hesitate to experiment with the code and modify the welcome model.    
+Don't hesitate to experiment with the code and modify the welcome model. It can be recreated easily and there is no better way to learn than hands-on exercises.  
 
-Also, have in mind that the ID of each model (including the welcome model) is unique. If you want to copy and paste the above example, be sure to update it accordingly.
+However, have in mind that the ID of every model (including the welcome model) is unique. If you want to copy and paste the example, be sure to update it accordingly.  
 
 ## Google Test
 
@@ -144,7 +145,7 @@ test_suite* init_unit_test_suite( int argc, char* argv[] ) {
 
 To send feedback, you need to have a BASIC account type or be a member of a TEAM.  
 
-An example looks as follows:
+A feedback example looks as follows:
 ```cpp
 #include "gtest/gtest.h"
 #include "ecfeed.hpp"
@@ -187,7 +188,7 @@ The parameters are as follows:
 - _duration_ - The optional test execution time (in milliseconds).
 - _custom_ - The optional map of custom key-value pairs.
 
-Note, that each test execution must return a feedback, regardless whether it has passed or failed. Only the first execution of the 'add\_feedback' method takes effect.  
+Note, that each test must return a feedback, regardless whether it has passed or failed. In each test, only the first invocation of the 'AddFeedback' method takes effect. All subsequent invocations are neglected.  
 
 Additionally, to the test generation method one optional argument can be added, namely 'label'. It provides a short description of the generated test suite.  
 
@@ -213,7 +214,7 @@ ecfeed::test_provider testProvider("XXXX-XXXX-XXXX-XXXX-XXXX", "home/user/securi
 ```cpp
 ecfeed::test_provider testProvider("XXXX-XXXX-XXXX-XXXX-XXXX", "home/user/security.p12", "gen.ecfeed.com");
 ```
-- *keystore_password* - The password for the keystore. The default value is 'changeit' which is the password used to encrypt the keystore downloaded form the 'ecfeed.com' page.
+- *keystore_password* - The password to the keystore. The default value is 'changeit'.
 ```cpp
 ecfeed::test_provider testProvider("XXXX-XXXX-XXXX-XXXX-XXXX", "home/user/security.p12", "gen.ecfeed.com", "changeit");
 ```
@@ -228,8 +229,8 @@ Generate test cases using the NWise algorithm.
 
 Arguments:
 - *method (required)* - The full name of the method that will be used for generation (including the package). If the method is not overloaded, its parameters are not required.
-- *n* - The 'N' value required in the NWise algorithm. The default is 2 (pairwise).
-- *coverage* - The percentage of N-tuples that the generator will try to cover. The default is 100.
+- *n* - The 'N' value required in the NWise algorithm. The default value is 2 (pairwise).
+- *coverage* - The percentage of N-tuples that the generator will try to cover. The default value is 100.
 - *choices* - A map in which keys are names of method parameters. Their values define a list of choices that should be used during the generation process. If an argument is skipped, all choices are used.
 - *constraints* - An array of constraints used for the generation. If not provided, all constraints are used. Additionally, two string values can be used instead, i.e. "ALL", "NONE".
 
@@ -273,8 +274,8 @@ Generate randomized test cases.
 Arguments:
 - *method (required)* - See 'generate\_nwise'.
 - *length* - The number of tests to be generated. The default is 1.
-- *duplicates* - If two identical tests are allowed to be generated. If set to 'false', the generator will stop after creating all allowed combinations. The default is 'true'.
-- *adaptive* - If set to true, the generator will try to provide tests that are farthest (in the means of the Hamming distance) from the ones already generated. The default is 'false'.
+- *duplicates* - If two identical tests are allowed to be generated. If set to 'false', the generator will stop after creating all allowed combinations. The default value is 'true'.
+- *adaptive* - If set to true, the generator will try to provide tests that are farthest (in the means of the Hamming distance) from the ones already generated. The default value is 'false'.
 - *choices* - See 'generate\_nwise'.
 - *constraints* - See 'generate\_nwise'.
 
