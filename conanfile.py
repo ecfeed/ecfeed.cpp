@@ -12,7 +12,7 @@ class EcFeedConan(ConanFile):
    requires = "libcurl/7.72.0", "openssl/1.1.1c"
 
    def source(self):
-      self.run("git clone --single-branch --branch conancenter git@github.com:ecfeed/ecfeed.cpp.git")
+      self.run("git clone --single-branch --branch develop https://github.com/ecfeed/ecfeed.cpp.git")
 
    def package(self):
       self.copy("*.hpp", dst="include", keep_path=False)

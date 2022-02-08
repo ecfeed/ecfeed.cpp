@@ -2607,7 +2607,10 @@ std::string request::generate_request_url_stream_parameter(const session_data& s
 
     std::optional<picojson::value> schema = session_data.process_template();
     if (schema) {
-      parser::append_json(request, "template", schema);
+      std::string element = std::string("RAW");
+      if (element.compare(schema.value().to_str()) != 0) {
+        parser::append_json(request, "template", schema);
+      }
     } else if (session_data.connection.request_type == "requestExport") {
       parser::append_json(request, "template", parser::process_string("CSV"));
     }
@@ -2643,6 +2646,7 @@ std::string request::escape_url(const std::string& request) {
   std::string url = request;
   
   try {
+    url = std::regex_replace(url, std::regex(" "), "%20");
     url = std::regex_replace(url, std::regex("\\\""), "%22");
     url = std::regex_replace(url, std::regex("'"), "%27");
     url = std::regex_replace(url, std::regex("\\{"), "%7B");
@@ -2961,7 +2965,8 @@ std::optional<picojson::value> session_data::process_template() const {
 
   auto field = main.find("template");
   if (field != main.end()) {
-    box = picojson::value(template_type_url_param(std::any_cast<ecfeed::template_type>(field->second)));
+    auto element = std::any_cast<ecfeed::template_type>(field->second);
+    box = picojson::value(template_type_url_param(element));
   }
 
   return box;

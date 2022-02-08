@@ -1,11 +1,11 @@
 #include "gtest/gtest.h"
 #include "ecfeed.hpp"
 #include <iostream>
+#include "config.hpp"
 
 namespace test_generate {
 
-   ecfeed::test_provider testProvider("IMHL-K0DU-2U0I-J532-25J9");
-   std::string method = "QuickStart.test";
+   std::shared_ptr<ecfeed::test_provider> testProvider = config::Default::get_test_provider();
 
    auto gen_random_quantity_single = ecfeed::params_random()
       .feedback(true).length(1).label("Random / Quantity - Single");
@@ -82,103 +82,103 @@ namespace test_generate {
 
 class FixtureGenerate : public ::testing::TestWithParam<ecfeed::test_arguments> {};
 
-// INSTANTIATE_TEST_CASE_P(gen_random_quantity_single, FixtureGenerate, ::testing::ValuesIn((test_generate::testProvider.generate_random(test_generate::method, test_generate::gen_random_quantity_single))->to_list()));
+// INSTANTIATE_TEST_CASE_P(gen_random_quantity_single, FixtureGenerate, ::testing::ValuesIn((test_generate::testProvider->generate_random(config::Default::F_QUICK, test_generate::gen_random_quantity_single))->to_list()));
 // TEST_P(FixtureGenerate, gen_random_quantity_single) {
    
 //    test_generate::validate(GetParam());
 // }
 
-// INSTANTIATE_TEST_CASE_P(gen_random_quantity_short, FixtureGenerate, ::testing::ValuesIn((test_generate::testProvider.generate_random(test_generate::method, test_generate::gen_random_quantity_short))->to_list()));
+// INSTANTIATE_TEST_CASE_P(gen_random_quantity_short, FixtureGenerate, ::testing::ValuesIn((test_generate::testProvider->generate_random(config::Default::F_QUICK, test_generate::gen_random_quantity_short))->to_list()));
 // TEST_P(FixtureGenerate, gen_random_quantity_short) {
    
 //    test_generate::validate(GetParam());
 // }
 
-// INSTANTIATE_TEST_CASE_P(gen_random_quantity_long, FixtureGenerate, ::testing::ValuesIn((test_generate::testProvider.generate_random(test_generate::method, test_generate::gen_random_quantity_long))->to_list()));
+// INSTANTIATE_TEST_CASE_P(gen_random_quantity_long, FixtureGenerate, ::testing::ValuesIn((test_generate::testProvider->generate_random(config::Default::F_QUICK, test_generate::gen_random_quantity_long))->to_list()));
 // TEST_P(FixtureGenerate, gen_random_quantity_long) {
    
 //    test_generate::validate(GetParam());
 // }
 
-// INSTANTIATE_TEST_CASE_P(gen_random, FixtureGenerate, ::testing::ValuesIn((test_generate::testProvider.generate_random(test_generate::method, test_generate::gen_random))->to_list()));
+// INSTANTIATE_TEST_CASE_P(gen_random, FixtureGenerate, ::testing::ValuesIn((test_generate::testProvider->generate_random(config::Default::F_QUICK, test_generate::gen_random))->to_list()));
 // TEST_P(FixtureGenerate, gen_random) {
    
 //    test_generate::validate(GetParam());
 // }
 
-// INSTANTIATE_TEST_CASE_P(gen_random_adaptive, FixtureGenerate, ::testing::ValuesIn((test_generate::testProvider.generate_random(test_generate::method, test_generate::gen_random_adaptive))->to_list()));
+// INSTANTIATE_TEST_CASE_P(gen_random_adaptive, FixtureGenerate, ::testing::ValuesIn((test_generate::testProvider->generate_random(config::Default::F_QUICK, test_generate::gen_random_adaptive))->to_list()));
 // TEST_P(FixtureGenerate, gen_random_adaptive) {
    
 //    test_generate::validate(GetParam());
 // }
 
-// INSTANTIATE_TEST_CASE_P(gen_random_duplicates, FixtureGenerate, ::testing::ValuesIn((test_generate::testProvider.generate_random(test_generate::method, test_generate::gen_random_duplicates))->to_list()));
+// INSTANTIATE_TEST_CASE_P(gen_random_duplicates, FixtureGenerate, ::testing::ValuesIn((test_generate::testProvider->generate_random(config::Default::F_QUICK, test_generate::gen_random_duplicates))->to_list()));
 // TEST_P(FixtureGenerate, gen_random_duplicates) {
    
 //    test_generate::validate(GetParam());
 // }
 
-// INSTANTIATE_TEST_CASE_P(gen_nwise, FixtureGenerate, ::testing::ValuesIn((test_generate::testProvider.generate_nwise(test_generate::method, test_generate::gen_nwise))->to_list()));
+// INSTANTIATE_TEST_CASE_P(gen_nwise, FixtureGenerate, ::testing::ValuesIn((test_generate::testProvider->generate_nwise(config::Default::F_QUICK, test_generate::gen_nwise))->to_list()));
 // TEST_P(FixtureGenerate, gen_nwise) {
    
 //    test_generate::validate(GetParam());
 // }
 
-// INSTANTIATE_TEST_CASE_P(gen_nwise_n, FixtureGenerate, ::testing::ValuesIn((test_generate::testProvider.generate_nwise(test_generate::method, test_generate::gen_nwise_n))->to_list()));
+// INSTANTIATE_TEST_CASE_P(gen_nwise_n, FixtureGenerate, ::testing::ValuesIn((test_generate::testProvider->generate_nwise(config::Default::F_QUICK, test_generate::gen_nwise_n))->to_list()));
 // TEST_P(FixtureGenerate, gen_nwise_n) {
    
 //    test_generate::validate(GetParam());
 // }
 
-// INSTANTIATE_TEST_CASE_P(gen_nwise_coverage, FixtureGenerate, ::testing::ValuesIn((test_generate::testProvider.generate_nwise(test_generate::method, test_generate::gen_nwise_coverage))->to_list()));
+// INSTANTIATE_TEST_CASE_P(gen_nwise_coverage, FixtureGenerate, ::testing::ValuesIn((test_generate::testProvider->generate_nwise(config::Default::F_QUICK, test_generate::gen_nwise_coverage))->to_list()));
 // TEST_P(FixtureGenerate, gen_nwise_coverage) {
    
 //    test_generate::validate(GetParam());
 // }
 
-// INSTANTIATE_TEST_CASE_P(gen_nwise_constraints_none, FixtureGenerate, ::testing::ValuesIn((test_generate::testProvider.generate_nwise(test_generate::method, test_generate::gen_nwise_constraints_none))->to_list()));
+// INSTANTIATE_TEST_CASE_P(gen_nwise_constraints_none, FixtureGenerate, ::testing::ValuesIn((test_generate::testProvider->generate_nwise(config::Default::F_QUICK, test_generate::gen_nwise_constraints_none))->to_list()));
 // TEST_P(FixtureGenerate, gen_nwise_constraints_none) {
    
 //    test_generate::validate(GetParam());
 // }
 
-// INSTANTIATE_TEST_CASE_P(gen_nwise_constraints_selected, FixtureGenerate, ::testing::ValuesIn((test_generate::testProvider.generate_nwise(test_generate::method, test_generate::gen_nwise_constraints_selected))->to_list()));
+// INSTANTIATE_TEST_CASE_P(gen_nwise_constraints_selected, FixtureGenerate, ::testing::ValuesIn((test_generate::testProvider->generate_nwise(config::Default::F_QUICK, test_generate::gen_nwise_constraints_selected))->to_list()));
 // TEST_P(FixtureGenerate, gen_nwise_constraints_selected) {
    
 //    test_generate::validate(GetParam());
 // }
 
-// INSTANTIATE_TEST_CASE_P(gen_nwise_choices_selected, FixtureGenerate, ::testing::ValuesIn((test_generate::testProvider.generate_nwise(test_generate::method, test_generate::gen_nwise_choices_selected))->to_list()));
+// INSTANTIATE_TEST_CASE_P(gen_nwise_choices_selected, FixtureGenerate, ::testing::ValuesIn((test_generate::testProvider->generate_nwise(config::Default::F_QUICK, test_generate::gen_nwise_choices_selected))->to_list()));
 // TEST_P(FixtureGenerate, gen_nwise_choices_selected) {
    
 //    test_generate::validate(GetParam());
 // }
 
-// INSTANTIATE_TEST_CASE_P(gen_cartesian, FixtureGenerate, ::testing::ValuesIn((test_generate::testProvider.generate_cartesian(test_generate::method, test_generate::gen_cartesian))->to_list()));
+// INSTANTIATE_TEST_CASE_P(gen_cartesian, FixtureGenerate, ::testing::ValuesIn((test_generate::testProvider->generate_cartesian(config::Default::F_QUICK, test_generate::gen_cartesian))->to_list()));
 // TEST_P(FixtureGenerate, gen_cartesian) {
    
 //    test_generate::validate(GetParam());
 // }
 
-// INSTANTIATE_TEST_CASE_P(gen_static, FixtureGenerate, ::testing::ValuesIn((test_generate::testProvider.generate_static(test_generate::method, test_generate::gen_static))->to_list()));
+// INSTANTIATE_TEST_CASE_P(gen_static, FixtureGenerate, ::testing::ValuesIn((test_generate::testProvider->generate_static(config::Default::F_QUICK, test_generate::gen_static))->to_list()));
 // TEST_P(FixtureGenerate, gen_static) {
    
 //    test_generate::validate(GetParam());
 // }
 
-// INSTANTIATE_TEST_CASE_P(gen_static_all, FixtureGenerate, ::testing::ValuesIn((test_generate::testProvider.generate_static(test_generate::method, test_generate::gen_static_all))->to_list()));
+// INSTANTIATE_TEST_CASE_P(gen_static_all, FixtureGenerate, ::testing::ValuesIn((test_generate::testProvider->generate_static(config::Default::F_QUICK, test_generate::gen_static_all))->to_list()));
 // TEST_P(FixtureGenerate, gen_static_all) {
    
 //    test_generate::validate(GetParam());
 // }
 
-// INSTANTIATE_TEST_CASE_P(gen_static_selected, FixtureGenerate, ::testing::ValuesIn((test_generate::testProvider.generate_static(test_generate::method, test_generate::gen_static_selected))->to_list()));
+// INSTANTIATE_TEST_CASE_P(gen_static_selected, FixtureGenerate, ::testing::ValuesIn((test_generate::testProvider->generate_static(config::Default::F_QUICK, test_generate::gen_static_selected))->to_list()));
 // TEST_P(FixtureGenerate, gen_static_selected) {
    
 //    test_generate::validate(GetParam());
 // }
 
-// INSTANTIATE_TEST_CASE_P(gen_nwise_feedback, FixtureGenerate, ::testing::ValuesIn((test_generate::testProvider.generate_nwise(test_generate::method, test_generate::gen_nwise_feedback))->to_list()));
+// INSTANTIATE_TEST_CASE_P(gen_nwise_feedback, FixtureGenerate, ::testing::ValuesIn((test_generate::testProvider->generate_nwise(config::Default::F_QUICK, test_generate::gen_nwise_feedback))->to_list()));
 // TEST_P(FixtureGenerate, gen_nwise_feedback) {
    
 //    test_generate::validate_feedback(GetParam());

@@ -9,10 +9,11 @@ add_compile_options(-std=c++2a)
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup(TARGETS)
 
-add_executable(ecfeed src/export.cpp)
+# add_executable(ecfeed src/export.cpp)
+# add_executable(ecfeed src/generate.cpp)
 # add_executable(ecfeed src/f10x10.cpp)
 # add_executable(ecfeed src/f100x2.cpp)
-# add_executable(ecfeed src/test.cpp)
+add_executable(ecfeed src/test.cpp)
 
 target_link_libraries(${PROJECT_NAME} stdc++fs)
 target_link_libraries(ecfeed CONAN_PKG::ecfeed CONAN_PKG::ecfeed)

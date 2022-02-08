@@ -1,11 +1,11 @@
 #include "gtest/gtest.h"
 #include "ecfeed.hpp"
 #include <iostream>
+#include "config.hpp"
 
 namespace test_generate {
 
-   ecfeed::test_provider testProvider("IMHL-K0DU-2U0I-J532-25J9");
-   std::string method = "com.example.test.Playground.size_100x2";
+   std::shared_ptr<ecfeed::test_provider> testProvider = config::Default::get_test_provider();
 
    auto gen_random_quantity_single = ecfeed::params_random()
       .feedback(true).length(1).label("Random / Quantity - Single");
@@ -50,37 +50,37 @@ namespace test_generate {
 
 class FixtureGenerate : public ::testing::TestWithParam<ecfeed::test_arguments> {};
 
-// INSTANTIATE_TEST_CASE_P(gen_random_quantity_single, FixtureGenerate, ::testing::ValuesIn((test_generate::testProvider.generate_random(test_generate::method, test_generate::gen_random_quantity_single))->to_list()));
+// INSTANTIATE_TEST_CASE_P(gen_random_quantity_single, FixtureGenerate, ::testing::ValuesIn((test_generate::testProvider->generate_random(config::Default::F_100x2, test_generate::gen_random_quantity_single))->to_list()));
 // TEST_P(FixtureGenerate, gen_random_quantity_single) {
    
 //    test_generate::validate(GetParam());
 // }
 
-// INSTANTIATE_TEST_CASE_P(gen_random_quantity_short, FixtureGenerate, ::testing::ValuesIn((test_generate::testProvider.generate_random(test_generate::method, test_generate::gen_random_quantity_short))->to_list()));
+// INSTANTIATE_TEST_CASE_P(gen_random_quantity_short, FixtureGenerate, ::testing::ValuesIn((test_generate::testProvider->generate_random(config::Default::F_100x2, test_generate::gen_random_quantity_short))->to_list()));
 // TEST_P(FixtureGenerate, gen_random_quantity_short) {
    
 //    test_generate::validate(GetParam());
 // }
 
-// INSTANTIATE_TEST_CASE_P(gen_random_quantity_long, FixtureGenerate, ::testing::ValuesIn((test_generate::testProvider.generate_random(test_generate::method, test_generate::gen_random_quantity_long))->to_list()));
+// INSTANTIATE_TEST_CASE_P(gen_random_quantity_long, FixtureGenerate, ::testing::ValuesIn((test_generate::testProvider->generate_random(config::Default::F_100x2, test_generate::gen_random_quantity_long))->to_list()));
 // TEST_P(FixtureGenerate, gen_random_quantity_long) {
    
 //    test_generate::validate(GetParam());
 // }
 
-// INSTANTIATE_TEST_CASE_P(gen_random_custom, FixtureGenerate, ::testing::ValuesIn((test_generate::testProvider.generate_random(test_generate::method, test_generate::gen_random_custom))->to_list()));
+// INSTANTIATE_TEST_CASE_P(gen_random_custom, FixtureGenerate, ::testing::ValuesIn((test_generate::testProvider->generate_random(config::Default::F_100x2, test_generate::gen_random_custom))->to_list()));
 // TEST_P(FixtureGenerate, gen_random_custom) {
    
 //    test_generate::validate(GetParam());
 // }
 
-// INSTANTIATE_TEST_CASE_P(gen_nwise, FixtureGenerate, ::testing::ValuesIn((test_generate::testProvider.generate_nwise(test_generate::method, test_generate::gen_nwise))->to_list()));
+// INSTANTIATE_TEST_CASE_P(gen_nwise, FixtureGenerate, ::testing::ValuesIn((test_generate::testProvider->generate_nwise(config::Default::F_100x2, test_generate::gen_nwise))->to_list()));
 // TEST_P(FixtureGenerate, gen_nwise) {
    
 //    test_generate::validate(GetParam());
 // }
 
-// INSTANTIATE_TEST_CASE_P(gen_nwise_feedback, FixtureGenerate, ::testing::ValuesIn((test_generate::testProvider.generate_nwise(test_generate::method, test_generate::gen_nwise_feedback))->to_list()));
+// INSTANTIATE_TEST_CASE_P(gen_nwise_feedback, FixtureGenerate, ::testing::ValuesIn((test_generate::testProvider->generate_nwise(config::Default::F_100x2, test_generate::gen_nwise_feedback))->to_list()));
 // TEST_P(FixtureGenerate, gen_nwise_feedback) {
    
 //    test_generate::validate_feedback(GetParam());
