@@ -2646,6 +2646,7 @@ std::string request::escape_url(const std::string& request) {
   std::string url = request;
   
   try {
+    url = std::regex_replace(url, std::regex(" "), "%20");
     url = std::regex_replace(url, std::regex("\\\""), "%22");
     url = std::regex_replace(url, std::regex("'"), "%27");
     url = std::regex_replace(url, std::regex("\\{"), "%7B");
@@ -2676,7 +2677,7 @@ std::string request::generate_request_url_stream(const session_data& session_dat
   url += "&client=cpp";
   url += "&request=" + request::generate_request_url_stream_parameter(session_data);
 
-  findAndReplaceAll(url, " ", "%20");
+  // findAndReplaceAll(url, " ", "%20");
 
   // std::cerr << "url:" << url << std::endl;
 
