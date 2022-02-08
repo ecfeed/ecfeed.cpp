@@ -9,7 +9,7 @@ class EcFeedConan(ConanFile):
    description = "An open library used to connect to the ecFeed service. It can be integrated with the most common testing frameworks and generates a stream of test cases using a selected algorithm (e.g. Cartesian, N-Wise)."
    topics = ("test", "ecfeed", "nwise")
    build_policy = 'missing'
-   requires = "libcurl/7.72.0", "openssl/1.1.1c", "boost/1.78.0"
+   requires = "libcurl/7.72.0", "openssl/1.1.1c"
 
    def source(self):
       self.run("git clone --single-branch --branch dev-feedback https://github.com/ecfeed/ecfeed.cpp.git")
