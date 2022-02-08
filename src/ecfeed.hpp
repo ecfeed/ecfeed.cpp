@@ -1221,6 +1221,7 @@ inline std::ostream &operator<<(std::ostream &os, const picojson::value &x) {
 #include <unordered_map>
 #include <optional>
 #include <algorithm>
+#include <boost/algorithm/string.hpp>
 
 namespace ecfeed {
 
@@ -2667,7 +2668,7 @@ std::string request::generate_request_url_stream(const session_data& session_dat
   url += "&client=cpp";
   url += "&request=" + request::generate_request_url_stream_parameter(session_data);
 
-  url = std::replace( url.begin(), url.end(), " ", "%20");
+  boost::replace_all(url, " ", "%20");
 
   // std::cerr << "url:" << url << std::endl;
 
