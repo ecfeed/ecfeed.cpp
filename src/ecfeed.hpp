@@ -2659,6 +2659,15 @@ std::string request::escape_url(const std::string& request) {
   return url;
 }
 
+void findAndReplaceAll(std::string & data, std::string toSearch, std::string replaceStr) {
+    size_t pos = data.find(toSearch);
+
+    while( pos != std::string::npos) {
+        data.replace(pos, toSearch.size(), replaceStr);
+        pos =data.find(toSearch, pos + replaceStr.size());
+    }
+}
+
 std::string request::generate_request_url_stream(const session_data& session_data) {
   std::string url;
 
@@ -2672,15 +2681,6 @@ std::string request::generate_request_url_stream(const session_data& session_dat
   // std::cerr << "url:" << url << std::endl;
 
   return request::escape_url(url);
-}
-
-void findAndReplaceAll(std::string & data, std::string toSearch, std::string replaceStr) {
-    size_t pos = data.find(toSearch);
-
-    while( pos != std::string::npos) {
-        data.replace(pos, toSearch.size(), replaceStr);
-        pos =data.find(toSearch, pos + replaceStr.size());
-    }
 }
 
 std::string request::generate_request_url_feedback(const session_data& session_data) {
