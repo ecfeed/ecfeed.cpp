@@ -24,8 +24,8 @@ class EcFeedConan(ConanFile):
       tools.get(**self.conan_data["sources"][self.version])
 
    def package(self):
-      self.copy("src/ecfeed.hpp", dst="include", keep_path=False)
-      self.copy("license.txt", dst="licenses", keep_path=False)
+      self.copy("ecfeed.cpp-conan/src/ecfeed.hpp", dst="include", keep_path=False)
+      self.copy("ecfeed.cpp-conan/license.txt", dst="licenses", keep_path=False)
 
    def package_id(self):
       self.info.header_only()
