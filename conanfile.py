@@ -15,7 +15,8 @@ class EcFeedConan(ConanFile):
       self.run("git clone --single-branch --branch develop https://github.com/ecfeed/ecfeed.cpp.git")
 
    def package(self):
-      self.copy("*.hpp", dst="include", keep_path=False)
+      self.copy("src/ecfeed.hpp", dst="include", keep_path=False)
+      self.copy("license.txt", dst="licenses", keep_path=False)
 
    def package_id(self):
       self.info.header_only()

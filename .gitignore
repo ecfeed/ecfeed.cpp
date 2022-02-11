@@ -6,9 +6,11 @@ ecfeed.creator.user
 **/conan.lock
 **/conanbuildinfo.args
 **/conanbuildinfo.txt
+**/conanbuildinfo.cmake
 **/conaninfo.txt
 **/graph_info.json
 
 **output
 
 **/build/*
+package
