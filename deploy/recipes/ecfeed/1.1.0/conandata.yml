@@ -1,6 +1,0 @@
-sources:
-  "1.1.0":
-    url: "https://github.com/ecfeed/ecfeed.cpp/archive/conan.zip"
-    sha256: "ce0bd9192e0a509d81e274bdda28bb805a512b1cbc05a33d6c46a37e077c795e"
-
-

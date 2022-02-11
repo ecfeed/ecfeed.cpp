@@ -14,3 +14,8 @@ ecfeed.creator.user
 
 **/build/*
 package
+
+conanfile.py
+conan_profile
+test
+deploy
