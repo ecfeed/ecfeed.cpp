@@ -13,8 +13,6 @@ class EcFeedConan(ConanFile):
    build_policy = 'missing'
    requires = "libcurl/7.72.0", "openssl/1.1.1c"
    no_copy_source = True
-   # url = "https://github.com/ecfeed/ecfeed.cpp"
-   # author = "ecFeed AS (mail@ecfeed.com)"
 
    @property
    def _source_subfolder(self):
@@ -24,8 +22,8 @@ class EcFeedConan(ConanFile):
       tools.get(**self.conan_data["sources"][self.version])
 
    def package(self):
-      self.copy("ecfeed.cpp-conan/src/ecfeed.hpp", dst="include", keep_path=False)
-      self.copy("ecfeed.cpp-conan/license.txt", dst="licenses", keep_path=False)
+      self.copy("ecfeed.cpp-1.1.0/src/ecfeed.hpp", dst="include", keep_path=False)
+      self.copy("ecfeed.cpp-1.1.0/license.txt", dst="licenses", keep_path=False)
 
    def package_id(self):
       self.info.header_only()
